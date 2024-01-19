@@ -17,25 +17,21 @@ def write_time_and_power(f, initial_time):
     float: The updated time value after writing the data.
 
     This function writes four lines to the specified file 'f', each representing a time
-    and corresponding optical power value. The time values are rounded to 3 decimal places
-    in scientific notation, and the optical power values alternate between 1 and 0.
+    and corresponding optical power value. The time values are not rounded, and the optical
+    power values alternate between 1 and 0.
 
     The function returns the updated time value after writing the data.
     """
-    rounded_time = round(initial_time, 9)  # Round to 9 decimal places
-    f.write(f'{rounded_time:.3e} 1\n')
+    f.write(f'{initial_time:.9e} 1\n')
 
     time = initial_time + 1e-6 - 1e-9
-    rounded_time = round(time, 9)  # Round to 9 decimal places
-    f.write(f'{rounded_time:.3e} 1\n')
+    f.write(f'{time:.9e} 1\n')
 
     time = initial_time + 1e-6
-    rounded_time = round(time, 9)  # Round to 9 decimal places
-    f.write(f'{rounded_time:.3e} 0\n')
+    f.write(f'{time:.9e} 0\n')
 
     off_interval_start = initial_time + 2.0e-5 - 1e-9
-    rounded_off_interval_start = round(off_interval_start, 9)  # Round to 9 decimal places
-    f.write(f'{rounded_off_interval_start:.3e} 0\n')
+    f.write(f'{off_interval_start:.9e} 0\n')
 
     return initial_time + 2.0e-5
 
