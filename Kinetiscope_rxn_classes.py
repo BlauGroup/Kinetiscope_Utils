@@ -75,6 +75,11 @@ class LightReaction(Reaction):
 class ElectronReaction(Reaction):
     pass  # No additional attributes for electron reactions
 
+#charge neutralization: reactants of opposite charges, products neutral
+#radical reactions require a total spin of 2
+#charge transfer: charge does not change
+ 
+
 def find_molecules_from_mpculeids(participants, mpculeid_to_mol_entry):
     """
     Converts a dictionary associating reaction "side" descriptors ("reactants" and/or "products") to
