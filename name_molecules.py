@@ -30,11 +30,8 @@ writes an excel file for the desired reactions of the form name1 + name2 => name
 and outputs those concentrations as text files. 
 """
 
-sql_get_initial_state = """
-    SELECT * FROM initial_state;
-"""
 
-def find_molecules_from_mpculeids(participants, mol_entries):
+def find_molecules_from_mpculeids(participants, mol_entries): #replace mol_entries with a dictionary associating each mpculeid with its molecule object
     """
     Takes a list of lists of reactant and product mpculeids and converts them to
     pymatgen Molecule objects
@@ -46,15 +43,22 @@ def find_molecules_from_mpculeids(participants, mol_entries):
 
     Returns: new_dict, a new dictionary with the same keys but a list of Molecule objects as the values
     """
+    
     new_dict = {}
+    
     for key, side in participants.items():
+        
         molecule_list = []
+        
         for mpculeid in side:
             for mol_entry in mol_entries:
+                
                 m_id = mol_entry.entry_id
                 if m_id == mpculeid:
                     molecule_list.append(mol_entry)
+                    
         new_dict[key] = molecule_list
+        
     return new_dict
     
 def name_molecule(mol, func_group_dict):
@@ -266,282 +270,293 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 
 #     dumpfn(data, path)
 
-start = time.time()
-folder = input("Please input the name of the folder where you want to store your files: ")
-original_directory = os.getcwd()
-new_dir = os.path.join(original_directory, folder)
-os.mkdir(new_dir)
+# start = time.time()
+# folder = input("Please input the name of the folder where you want to store your files: ")
+# original_directory = os.getcwd()
+# new_dir = os.path.join(original_directory, folder)
+# os.mkdir(new_dir)
 
-print('Associating functional groups with their Molecule objects...')
-func_group_dict = {} #take a group of xyz files associated with our functional groups and generate a dictionary associating the molecule graph of that functional group with its name
-for filename in glob.glob('*.xyz'):
-    mol = Molecule.from_file(filename)
-    name = filename.replace('.xyz', '')
-    func_group_dict[name] = mol
-print('Done!')
+# print('Associating functional groups with their Molecule objects...')
+# func_group_dict = {} #take a group of xyz files associated with our functional groups and generate a dictionary associating the molecule graph of that functional group with its name
+# for filename in glob.glob('*.xyz'):
+#     mol = Molecule.from_file(filename)
+#     name = filename.replace('.xyz', '')
+#     func_group_dict[name] = mol
+# print('Done!')
 
 print('Loading mol_entries.pickle...')
 with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
     mol_entries = pickle.load(f)
 print('Done!')
- 
-# n = 0
-name_dict = {}
-reactions_added = set()
-entry_ids = set()
-reactions = []
 
-print('Naming Molecules...')
+mpcule_id_molecule_dict = {}
 
+for entry in mol_entries:
+    
+    mpcule_id = entry.entry_id
+    
+    if mpcule_id: #the electron species has no mpcule_id so we catch it here--what do we do with it?
+        mpcule_id_molecule_dict[mpcule_id] = entry
+        print(mpcule_id_molecule_dict)
+        break
+    
+# # n = 0
+# name_dict = {}
 # reactions_added = set()
+# entry_ids = set()
+# reactions = []
 
-print('Adding reactions for phase 2 network products...')                                             
-second_name = 'sink_report'
-second_entries = loadfn(second_name + ".json") 
+# print('Naming Molecules...')
 
-for dictionary in second_entries.values(): #iterates through each network product
-    species_index = dictionary["species_index"]
-    # print(species_index)
-    reaction_json = loadfn(str(species_index) + "_pathway.json") #loads each network_product.json file as dictionary containing  
-    pathways = reaction_json["pathways"]                         #two keys: pathways and reactions.
-    pathways.sort(key = operator.itemgetter('frequency'), reverse = True) #sorts by frequency
-    top_pathways = []
-    n = 1
-    ten_saved = False
+# # reactions_added = set()
+
+# print('Adding reactions for phase 2 network products...')                                             
+# second_name = 'sink_report'
+# second_entries = loadfn(second_name + ".json") 
+
+# for dictionary in second_entries.values(): #iterates through each network product
+#     species_index = dictionary["species_index"]
+#     # print(species_index)
+#     reaction_json = loadfn(str(species_index) + "_pathway.json") #loads each network_product.json file as dictionary containing  
+#     pathways = reaction_json["pathways"]                         #two keys: pathways and reactions.
+#     pathways.sort(key = operator.itemgetter('frequency'), reverse = True) #sorts by frequency
+#     top_pathways = []
+#     n = 1
+#     ten_saved = False
     
-    while not ten_saved: #makes sure we save top ten reactions even for network products that don't have 10 1-step reactions forming them
-        for dictionary in pathways:
-            if int(dictionary['weight']) == n:
-                top_pathways.append(dictionary['pathway']) #top_pathways will be a list of ints, with each number corresponding to a reaaction index
-                if len(top_pathways) == 10:
-                    ten_saved = True
-                    break
-        n += 1
+#     while not ten_saved: #makes sure we save top ten reactions even for network products that don't have 10 1-step reactions forming them
+#         for dictionary in pathways:
+#             if int(dictionary['weight']) == n:
+#                 top_pathways.append(dictionary['pathway']) #top_pathways will be a list of ints, with each number corresponding to a reaaction index
+#                 if len(top_pathways) == 10:
+#                     ten_saved = True
+#                     break
+#         n += 1
     
-    for pathway in top_pathways:
-        for reaction in pathway:
-            if reaction not in reactions_added:
-                reactions_added.add(reaction)
-                rxn = reaction_json["reactions"][str(reaction)]
-                reactions.append(rxn)
-                molecule_dict = find_molecules_from_mpculeids(rxn, mol_entries) #want to associate an mpculeid with a name
-                for l in molecule_dict.values():
-                    for molecule in l:
-                        if molecule.entry_id not in entry_ids: #i.e. we haven't named this molecule yet
-                            name = name_molecule(molecule, func_group_dict)
-                            if stereoisomer_test(name_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
-                                name_dict.update(stereoisomer_test(name_dict, molecule.entry_id, name))
-                                if len(stereoisomer_test(name_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
-                                    name_dict.pop(name)
-                            else:
-                                name_dict[name] = molecule.entry_id
-                            entry_ids.add(molecule.entry_id)
-                # added.append(num)
-                # added_hashes.update(reaction_dict.items())
-            # reactants = reaction_json["reactions"][num]["reactants"]
-            # products = reaction_json["reactions"][num]["products"]
-            # participants = [reactants, products] 
-            # reaction_dict = create_reaction_dict(participants)
-            #         if not resonant_reaction(reaction_dict, added_hashes):
-            #             if not reverse_reaction(reaction_dict, added_hashes):
-            #                 if not charge_transfer_reaction(reaction_dict):
+#     for pathway in top_pathways:
+#         for reaction in pathway:
+#             if reaction not in reactions_added:
+#                 reactions_added.add(reaction)
+#                 rxn = reaction_json["reactions"][str(reaction)]
+#                 reactions.append(rxn)
+#                 molecule_dict = find_molecules_from_mpculeids(rxn, mol_entries) #want to associate an mpculeid with a name
+#                 for l in molecule_dict.values():
+#                     for molecule in l:
+#                         if molecule.entry_id not in entry_ids: #i.e. we haven't named this molecule yet
+#                             name = name_molecule(molecule, func_group_dict)
+#                             if stereoisomer_test(name_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
+#                                 name_dict.update(stereoisomer_test(name_dict, molecule.entry_id, name))
+#                                 if len(stereoisomer_test(name_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
+#                                     name_dict.pop(name)
+#                             else:
+#                                 name_dict[name] = molecule.entry_id
+#                             entry_ids.add(molecule.entry_id)
+#                 # added.append(num)
+#                 # added_hashes.update(reaction_dict.items())
+#             # reactants = reaction_json["reactions"][num]["reactants"]
+#             # products = reaction_json["reactions"][num]["products"]
+#             # participants = [reactants, products] 
+#             # reaction_dict = create_reaction_dict(participants)
+#             #         if not resonant_reaction(reaction_dict, added_hashes):
+#             #             if not reverse_reaction(reaction_dict, added_hashes):
+#             #                 if not charge_transfer_reaction(reaction_dict):
                                 
-    # n = 1
+#     # n = 1
                 
-# print('Done! ', len(mpcule_ids), ' reactions total')
+# # print('Done! ', len(mpcule_ids), ' reactions total')
 
-print('Done!', len(reactions_added), 'added forming network products!')
+# print('Done!', len(reactions_added), 'added forming network products!')
 
-print('Opening json...')  
-third_name = 'reaction_tally'
-third_entries = loadfn(third_name + ".json")
-print('Done!') 
+# print('Opening json...')  
+# third_name = 'reaction_tally'
+# third_entries = loadfn(third_name + ".json")
+# print('Done!') 
 
-print("Naming reactions that fired more than 500 times...")
+# print("Naming reactions that fired more than 500 times...")
 
-for reaction in third_entries["pathways"].keys():
-    if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
-        if reaction not in reactions_added:
-            reactions_added.add(reaction)
-            rxn = third_entries["reactions"][reaction]
-            reactions.append(rxn)
-            molecule_dict = find_molecules_from_mpculeids(rxn, mol_entries) #want to associate an mpculeid with a name
-            for l in molecule_dict.values():
-                for molecule in l:
-                    if molecule.entry_id not in entry_ids: #i.e. we haven't named this molecule yet
-                        name = name_molecule(molecule, func_group_dict) 
-                        if stereoisomer_test(name_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
-                            name_dict.update(stereoisomer_test(name_dict, molecule.entry_id, name))
-                            if len(stereoisomer_test(name_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
-                                name_dict.pop(name)
-                        else:
-                            name_dict[name] = molecule.entry_id
-                        entry_ids.add(molecule.entry_id)
+# for reaction in third_entries["pathways"].keys():
+#     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
+#         if reaction not in reactions_added:
+#             reactions_added.add(reaction)
+#             rxn = third_entries["reactions"][reaction]
+#             reactions.append(rxn)
+#             molecule_dict = find_molecules_from_mpculeids(rxn, mol_entries) #want to associate an mpculeid with a name
+#             for l in molecule_dict.values():
+#                 for molecule in l:
+#                     if molecule.entry_id not in entry_ids: #i.e. we haven't named this molecule yet
+#                         name = name_molecule(molecule, func_group_dict) 
+#                         if stereoisomer_test(name_dict, molecule.entry_id, name): #returns empty dict if no stereoisomers already in dict
+#                             name_dict.update(stereoisomer_test(name_dict, molecule.entry_id, name))
+#                             if len(stereoisomer_test(name_dict, molecule.entry_id, name)) == 2: #If two entries are returned, this means we've named two stereoisomers #1 and #2, and need to remove the duplicate name from the dict
+#                                 name_dict.pop(name)
+#                         else:
+#                             name_dict[name] = molecule.entry_id
+#                         entry_ids.add(molecule.entry_id)
                                 
-print('Done!', len(reactions_added), 'added!')
-# print('Done naming molecules!')
+# print('Done!', len(reactions_added), 'added!')
+# # print('Done naming molecules!')
+# # end = time.time()
+# # total = end - start
+# # time_min = total/60
+# # time_min = round(time_min, 2)
+# # print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
+
+# print("Done naming molecules!")
+
+# n = 0
+# longest = 0
+
+# for name in name_dict.keys():
+#     if len(name) > 32:
+#         n += 1
+#         print(name)
+#         if len(name) > longest:
+#             longest = len(name)
+# if longest > 0:  
+#     print('Warning, ', n, 'too long names have been generated!' )
+#     print('Longest length: ', longest)
+    
+# dict_set = set(name_dict.values())
+# if entry_ids.difference(dict_set):
+#     print('Unnamed molecule hashes: ', entry_ids.difference(dict_set))
+        
+# l_list = []
+    
+# print('Testing for duplicates...')
+# for name, h in name_dict.items(): 
+#     for na, ha in name_dict.items():
+#         if na == name and ha != h:
+#             l_list.append((ha, h))
+
+# if l_list:
+#     print('# of duplicate entries found: ', len(l_list))
+#     print(l_list)
+    
+# print('Done!') 
+
+# # name_dict = loadfn('named_molecules.json')
+# mpculid_dict = dict([(value, key) for key, value in name_dict.items()]) #wanted to do this while generating the names, but can't because the names can change as we're building the dictionary
+
+# key_dict = {} #consider printing a key instead if it seems necessary
+# for name, mpculeid in name_dict.items():
+#     for species in mol_entries:
+#         if mpculeid == species.entry_id:
+#             key_dict[name] = species.ind
+
+# if len(key_dict) != len(name_dict):
+#     print('Error: not all names associated with a molecule index')
+#     for name in name_dict.keys():
+#         if not key_dict.get(name, False):
+#             print('Name not in key: ', name)
+# else:
+#     print('Saving key json...')
+#     os.chdir(new_dir)
+#     dumpfn(key_dict, 'name_index_key.json')
+#     os.chdir(original_directory)
+#     print('Done!')
+
+# index_dict = dict([(value, key) for key, value in key_dict.items()]) #want to look up name by index later
+# named_reactions = []
+
+# print('Converting reactions containing names...')
+# # for reaction in third_entries["pathways"].keys():
+# #     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
+# #         rxn = third_entries["reactions"][reaction]
+# for rxn in reactions:
+#         # for rxn in third_entries["reactions"].keys():
+#             # if str(reaction) == rxn:
+#     named_reaction = write_reaction(rxn, mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
+#     named_reactions.append(named_reaction)
+
+# print('Done!')
+
+# print('Writing reactions to csv file...')
+# # with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
+# #     # reader = csv.reader(csvfile)
+# #     # fields = list(next(reader))
+
+# dict_list = []
+
+# for reaction in named_reactions:
+#     csv_dict = {}
+#     csv_dict['# equation'] = reaction
+#     csv_dict['fwd_A'] = 1
+#     csv_dict['fwd_temp_coeff'] = 0
+#     csv_dict['fwd_Ea'] = 0
+#     csv_dict['fwd_k'] = 10379761818429.5 #kT/h
+#     csv_dict['rev_A'] = 1
+#     csv_dict['rev_temp_coeff'] = 0
+#     csv_dict['rev_Ea'] = 0
+#     csv_dict['rev_k'] = 1
+#     csv_dict['fwd_k0'] = 1
+#     csv_dict['rev_k0'] = 1
+#     csv_dict['alpha_alv'] = 0.5
+#     csv_dict['equil_potential'] = 0.5
+#     csv_dict['num_electrons'] = 0
+#     csv_dict['fwd_prog_k'] = 1
+#     csv_dict['rev_prog_k'] = 1
+#     csv_dict['non_stoichiometric'] = 0
+#     csv_dict['rate_constant_format'] = 0
+#     dict_list.append(csv_dict)
+
+# os.chdir(new_dir)
+    
+# with open("euvl_phase2_reactions.csv", 'w', newline = "") as csvfile:
+#     writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
+#     writer.writeheader()
+#     for reaction in dict_list:
+#         writer.writerow(reaction)
+  
+# print('Done!')     
+#     # writer = csv.writer(csvfile)
+
+# print('Writing concentration text files...')   
+# os.chdir(original_directory)
+ 
+# database = input("Please input the path of the sqlite3 database: ")
+
+# initial_state_con = sqlite3.connect(database)
+# cur = initial_state_con.cursor()
+# concentration_dict = {}
+
+# for row in cur.execute(sql_get_initial_state):
+#       concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
+
+# # # folder = "Concentration_files"
+# # current_directory = os.getcwd()
+# # path = os.join(current_directory, folder)
+# # os.mkdir(path)
+# # os.chdir(path)
+
+# os.chdir(new_dir)
+
+# total_num_particles = float(sum(concentration_dict.values()))
+# numbers = "1 1 1 "
+# for name in name_dict.keys():
+#     filename = name + ".txt"
+#     with open(filename, "w") as f:
+#         f.write("# column(x) row(y) layer(z) value")
+#         f.write('\n')
+#         name_index = key_dict[name]
+#         species_particle_number = float(concentration_dict[name_index])
+#         ratio = species_particle_number / total_num_particles
+#         concentration = ratio * 8.076
+#         if concentration >= 1: #deals with significant figures
+#             rounded_concentration = round(concentration, 3)
+#         elif concentration < 0.01:
+#             rounded_concentration = round(concentration, 5)
+#         else:
+#             rounded_concentration = round(concentration, 4)
+#         to_write = numbers + str(rounded_concentration)
+#         f.write(to_write)
+    
+# print('Done!') 
+
 # end = time.time()
 # total = end - start
 # time_min = total/60
 # time_min = round(time_min, 2)
 # print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
-
-print("Done naming molecules!")
-
-n = 0
-longest = 0
-
-for name in name_dict.keys():
-    if len(name) > 32:
-        n += 1
-        print(name)
-        if len(name) > longest:
-            longest = len(name)
-if longest > 0:  
-    print('Warning, ', n, 'too long names have been generated!' )
-    print('Longest length: ', longest)
-    
-dict_set = set(name_dict.values())
-if entry_ids.difference(dict_set):
-    print('Unnamed molecule hashes: ', entry_ids.difference(dict_set))
-        
-l_list = []
-    
-print('Testing for duplicates...')
-for name, h in name_dict.items(): 
-    for na, ha in name_dict.items():
-        if na == name and ha != h:
-            l_list.append((ha, h))
-
-if l_list:
-    print('# of duplicate entries found: ', len(l_list))
-    print(l_list)
-    
-print('Done!') 
-
-# name_dict = loadfn('named_molecules.json')
-mpculid_dict = dict([(value, key) for key, value in name_dict.items()]) #wanted to do this while generating the names, but can't because the names can change as we're building the dictionary
-
-key_dict = {} #consider printing a key instead if it seems necessary
-for name, mpculeid in name_dict.items():
-    for species in mol_entries:
-        if mpculeid == species.entry_id:
-            key_dict[name] = species.ind
-
-if len(key_dict) != len(name_dict):
-    print('Error: not all names associated with a molecule index')
-    for name in name_dict.keys():
-        if not key_dict.get(name, False):
-            print('Name not in key: ', name)
-else:
-    print('Saving key json...')
-    os.chdir(new_dir)
-    dumpfn(key_dict, 'name_index_key.json')
-    os.chdir(original_directory)
-    print('Done!')
-
-index_dict = dict([(value, key) for key, value in key_dict.items()]) #want to look up name by index later
-named_reactions = []
-
-print('Converting reactions containing names...')
-# for reaction in third_entries["pathways"].keys():
-#     if third_entries["pathways"][reaction] > 500: #only add network products found >500 times
-#         rxn = third_entries["reactions"][reaction]
-for rxn in reactions:
-        # for rxn in third_entries["reactions"].keys():
-            # if str(reaction) == rxn:
-    named_reaction = write_reaction(rxn, mpculid_dict) #iterate through the desired reactions, and find the name from the mpcule id
-    named_reactions.append(named_reaction)
-
-print('Done!')
-
-print('Writing reactions to csv file...')
-# with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
-#     # reader = csv.reader(csvfile)
-#     # fields = list(next(reader))
-
-dict_list = []
-
-for reaction in named_reactions:
-    csv_dict = {}
-    csv_dict['# equation'] = reaction
-    csv_dict['fwd_A'] = 1
-    csv_dict['fwd_temp_coeff'] = 0
-    csv_dict['fwd_Ea'] = 0
-    csv_dict['fwd_k'] = 10379761818429.5 #kT/h
-    csv_dict['rev_A'] = 1
-    csv_dict['rev_temp_coeff'] = 0
-    csv_dict['rev_Ea'] = 0
-    csv_dict['rev_k'] = 1
-    csv_dict['fwd_k0'] = 1
-    csv_dict['rev_k0'] = 1
-    csv_dict['alpha_alv'] = 0.5
-    csv_dict['equil_potential'] = 0.5
-    csv_dict['num_electrons'] = 0
-    csv_dict['fwd_prog_k'] = 1
-    csv_dict['rev_prog_k'] = 1
-    csv_dict['non_stoichiometric'] = 0
-    csv_dict['rate_constant_format'] = 0
-    dict_list.append(csv_dict)
-
-os.chdir(new_dir)
-    
-with open("euvl_phase2_reactions.csv", 'w', newline = "") as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
-    writer.writeheader()
-    for reaction in dict_list:
-        writer.writerow(reaction)
-  
-print('Done!')     
-    # writer = csv.writer(csvfile)
-
-print('Writing concentration text files...')   
-os.chdir(original_directory)
- 
-database = input("Please input the path of the sqlite3 database: ")
-
-initial_state_con = sqlite3.connect(database)
-cur = initial_state_con.cursor()
-concentration_dict = {}
-
-for row in cur.execute(sql_get_initial_state):
-      concentration_dict[row[0]] = row[1] #associates each species index with its particle count in that trajectory
-
-# # folder = "Concentration_files"
-# current_directory = os.getcwd()
-# path = os.join(current_directory, folder)
-# os.mkdir(path)
-# os.chdir(path)
-
-os.chdir(new_dir)
-
-total_num_particles = float(sum(concentration_dict.values()))
-numbers = "1 1 1 "
-for name in name_dict.keys():
-    filename = name + ".txt"
-    with open(filename, "w") as f:
-        f.write("# column(x) row(y) layer(z) value")
-        f.write('\n')
-        name_index = key_dict[name]
-        species_particle_number = float(concentration_dict[name_index])
-        ratio = species_particle_number / total_num_particles
-        concentration = ratio * 8.076
-        if concentration >= 1: #deals with significant figures
-            rounded_concentration = round(concentration, 3)
-        elif concentration < 0.01:
-            rounded_concentration = round(concentration, 5)
-        else:
-            rounded_concentration = round(concentration, 4)
-        to_write = numbers + str(rounded_concentration)
-        f.write(to_write)
-    
-print('Done!') 
-
-end = time.time()
-total = end - start
-time_min = total/60
-time_min = round(time_min, 2)
-print('named ', len(name_dict), 'molecules and took', time_min, ' minutes')
 
         # initial_state_array = np.zeros(
         #     self.number_of_species,
