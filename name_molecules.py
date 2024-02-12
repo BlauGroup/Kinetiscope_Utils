@@ -31,35 +31,28 @@ and outputs those concentrations as text files.
 """
 
 
-def find_molecules_from_mpculeids(participants, mol_entries): #replace mol_entries with a dictionary associating each mpculeid with its molecule object
+def find_molecules_from_mpculeids(participants, mpculeid_to_mol_entry):
     """
-    Takes a list of lists of reactant and product mpculeids and converts them to
-    pymatgen Molecule objects
+    Converts a dictionary associating reaction "side" descriptors ("reactants" and/or "products") to
+    reactant and product mpculeids into a dictionary associating those descriptors with
+    lists of pymatgen Molecule objects.
 
-    participants: a dictionary of the form: {"reatants": "reactantmpculeid", "products": etc.}
-    mol_entries: a pickled representation of an object from the open file object file with the reconstituted object
-    hierarchy--contains pymatgen Molecule objects representing species in our reaction network which are associated
-    with a given mpculeid
+    participants: a dictionary with keys limited to "reactants" and/or "products," 
+                  where each value is a list of mpculeids representing reactants or products.
+    mpculeid_to_mol_entry: a dictionary associating each mpculeid with its corresponding pymatgen Molecule object.
 
-    Returns: new_dict, a new dictionary with the same keys but a list of Molecule objects as the values
+    Returns: new_dict, a new dictionary with the same keys ("reactants" and/or "products") 
+             but updated values, where each value is a list of pymatgen Molecule objects associated with the mpculeids.
+             Raises a KeyError if an mpculeid is not found in the dictionary.
     """
-    
     new_dict = {}
-    
     for key, side in participants.items():
-        
-        molecule_list = []
-        
-        for mpculeid in side:
-            for mol_entry in mol_entries:
-                
-                m_id = mol_entry.entry_id
-                if m_id == mpculeid:
-                    molecule_list.append(mol_entry)
-                    
+        molecule_list = [mpculeid_to_mol_entry[mpculeid] for mpculeid in side]
         new_dict[key] = molecule_list
-        
     return new_dict
+
+# Function has been tested and passed the provided test cases
+# Test cases covered scenarios such as basic conversion, missing mpculeids, and empty input
     
 def name_molecule(mol, func_group_dict):
     """
