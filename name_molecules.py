@@ -45,10 +45,14 @@ def find_molecules_from_mpculeids(participants, mpculeid_to_mol_entry):
              but updated values, where each value is a list of pymatgen Molecule objects associated with the mpculeids.
              Raises a KeyError if an mpculeid is not found in the dictionary.
     """
+    
     new_dict = {}
+    
     for key, side in participants.items():
+        
         molecule_list = [mpculeid_to_mol_entry[mpculeid] for mpculeid in side]
         new_dict[key] = molecule_list
+        
     return new_dict
 
 # Function has been tested and passed the provided test cases
