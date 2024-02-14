@@ -31,29 +31,29 @@ and outputs those concentrations as text files.
 """
 
 
-def find_molecules_from_mpculeids(participants, mpculeid_to_mol_entry):
-    """
-    Converts a dictionary associating reaction "side" descriptors ("reactants" and/or "products") to
-    reactant and product mpculeids into a dictionary associating those descriptors with
-    lists of pymatgen Molecule objects.
+# def find_molecules_from_mpculeids(participants, mpculeid_to_mol_entry):
+#     """
+#     Converts a dictionary associating reaction "side" descriptors ("reactants" and/or "products") to
+#     reactant and product mpculeids into a dictionary associating those descriptors with
+#     lists of pymatgen Molecule objects.
 
-    participants: a dictionary with keys limited to "reactants" and/or "products," 
-                  where each value is a list of mpculeids representing reactants or products.
-    mpculeid_to_mol_entry: a dictionary associating each mpculeid with its corresponding pymatgen Molecule object.
+#     participants: a dictionary with keys limited to "reactants" and/or "products," 
+#                   where each value is a list of mpculeids representing reactants or products.
+#     mpculeid_to_mol_entry: a dictionary associating each mpculeid with its corresponding pymatgen Molecule object.
 
-    Returns: new_dict, a new dictionary with the same keys ("reactants" and/or "products") 
-             but updated values, where each value is a list of pymatgen Molecule objects associated with the mpculeids.
-             Raises a KeyError if an mpculeid is not found in the dictionary.
-    """
+#     Returns: new_dict, a new dictionary with the same keys ("reactants" and/or "products") 
+#              but updated values, where each value is a list of pymatgen Molecule objects associated with the mpculeids.
+#              Raises a KeyError if an mpculeid is not found in the dictionary.
+#     """
     
-    new_dict = {}
+#     new_dict = {}
     
-    for key, side in participants.items():
+#     for key, side in participants.items():
         
-        molecule_list = [mpculeid_to_mol_entry[mpculeid] for mpculeid in side]
-        new_dict[key] = molecule_list
+#         molecule_list = [mpculeid_to_mol_entry[mpculeid] for mpculeid in side]
+#         new_dict[key] = molecule_list
         
-    return new_dict
+#     return new_dict
 
 # Function has been tested and passed the provided test cases
 # Test cases covered scenarios such as basic conversion, missing mpculeids, and empty input
@@ -281,10 +281,6 @@ def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appr
 #     func_group_dict[name] = mol
 # print('Done!')
 
-print('Loading mol_entries.pickle...')
-with open('mol_entries.pickle', 'rb') as f: #loads pymatgen Molecule objects from pickle file
-    mol_entries = pickle.load(f)
-print('Done!')
 
 mpcule_id_molecule_dict = {}
 
