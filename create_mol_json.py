@@ -22,8 +22,10 @@ for entry in mol_entries:
     
     mpcule_id = entry.entry_id
     
-    if mpcule_id: #the electron species has no mpcule_id so we catch it here--what do we do with it?
-        assert mpcule_id_molecule_dict.get(mpcule_id, False) #i.e. hasn't been added
-        mpcule_id_molecule_dict[mpcule_id] = entry.molecule
+    if mpcule_id:
+        assert mpcule_id not in mpcule_id_molecule_dict
+        undirected_graph = nx.Graph(entry.graph)
+        json_graph = nx.node_link_data(undirected_graph)
+        mpcule_id_molecule_dict[mpcule_id] = {"molecule" : entry.molecule, "nx_graph" : json_graph}
  
 dumpfn(mpcule_id_molecule_dict, "mpcule_id_molecule_association.json")
