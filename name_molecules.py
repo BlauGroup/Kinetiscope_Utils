@@ -30,15 +30,15 @@ writes an excel file for the desired reactions of the form name1 + name2 => name
 and outputs those concentrations as text files. 
 """
 
-def validate_species_to_name(species_to_name):
-    species_node_link_data = species_to_name.get("nx_graph", False)
+def validate_species_to_name(species_dict):
+    species_node_link_data = species_dict.get("nx_graph", False)
     species_graph = nx.node_link_graph(species_node_link_data)
-    species_mol = species_to_name.get("molecule", False)
+    species_pymatgen_mol = species_dict.get("molecule", False)
     
-    if not species_graph or not species_mol:
+    if not species_graph or not species_pymatgen_mol:
         raise ValueError("Missing required keys 'nx_graph' or 'molecule' in species_to_name.")
     
-    return species_graph, species_mol
+    return species_graph, species_pymatgen_mol
 
 def update_species_name(species_name, name, number):
     if name not in species_name:
@@ -75,8 +75,8 @@ def update_species_name_with_atom_composition(species_name, name, remaining_spec
     
     return species_name
 
-def generate_species_name(species_to_name, func_group_dict):
-    species_graph, species_mol = validate_species_to_name(species_to_name)
+def generate_species_name(species_dict, func_group_dict):
+    species_graph, species_pymatgen_mol = validate_species_to_name(species_dict)
     remaining_species_graph = copy.deepcopy(species_graph)
     species_name = ""
 
@@ -88,9 +88,9 @@ def generate_species_name(species_to_name, func_group_dict):
             remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_locations)
     
     species_name = update_species_name_with_atom_composition(species_name, name, remaining_species_graph) \
-                    if species_name else str(species_mol.molecule.composition).replace(" ", "") + '_'
+                    if species_name else str(species_pymatgen_mol.molecule.composition).replace(" ", "") + '_'
 
-    charge_suffix = "+" if species_mol.molecule.charge == 1 else str(species_mol.molecule.charge)
+    charge_suffix = "+" if species_pymatgen_mol.molecule.charge == 1 else str(species_pymatgen_mol.molecule.charge)
     species_name += charge_suffix
 
     return species_name
