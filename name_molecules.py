@@ -31,7 +31,8 @@ and outputs those concentrations as text files.
 """
 
 def validate_species_to_name(species_to_name):
-    species_graph = species_to_name.get("nx_graph", False)
+    species_node_link_data = species_to_name.get("nx_graph", False)
+    species_graph = nx.node_link_graph(species_node_link_data)
     species_mol = species_to_name.get("molecule", False)
     
     if not species_graph or not species_mol:
@@ -147,16 +148,28 @@ def stereoisomer_test(stereoisomer_list, name):
 
     """
     new_stereos_list = []
-    if len(stereoisomer_list) == 1: #i.e. if name already in dictionary but graphs of molecules are different
+    if len(stereoisomer_list) == 1:
         name_1 = name + '_#1'
         name_2 = name + '_#2'
         new_stereos_list.append(name_1)
         new_stereos_list.append(name_2)
     else:
         current_max_num = str(len(stereoisomer_list))
+        new_stereos_list = stereoisomer_list
         new_isomer = name + '#_' + current_max_num
         new_stereos_list.append(new_isomer)
     return new_stereos_list
+
+def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
+    current_stereos = stereo_dict.get(test_name)
+    new_stereos = stereoisomer_test(current_stereos, test_name)
+    stereo_dict[test_name] = new_stereos
+    
+    old_stereo_mpculeid = name_mpcule_dict.get(test_name, False)
+    if old_stereo_mpculeid:
+        name_mpcule_dict[old_stereo_mpculeid] = new_stereos[-2]
+    name_mpcule_dict[mpculeid] = new_stereos[-1]
+    
 
 # def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appropriate format for kinetiscope
 #     """
@@ -269,19 +282,22 @@ json = "mpcule_id_molecule_association.json"
 mpcule_id_molecule_dict = loadfn(json)
 
 mpcule_name_dict = {}
+name_mpcule_dict = {}
 stereo_dict = {}
 names = set()
 
-for mpculeid, mol_dict in mpcule_id_molecule_dict:
-    test_name = generate_species_name(mol_dict)
+for mpculeid, mol_dict in mpcule_id_molecule_dict.items():
+    test_name = generate_species_name(mol_dict, func_group_dict)
     if test_name in stereo_dict:
-        current_stereos = stereo_dict.get(test_name)
+        update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid)
     else:
         mpcule_name_dict[mpculeid] = test_name
+        name_mpcule_dict[test_name] = mpculeid
         stereo_dict[test_name] = [test_name]
-# reactions_added = set()
-# reactions = []
+reactions_added = set()
+reactions = []
 
+print(mpcule_name_dict)
 # print('Naming Molecules...')
 
 # # reactions_added = set()
