@@ -21,6 +21,7 @@ import csv
 import copy
 import operator
 
+#TODO investigate why TPS_2+ is just TPS_2
 
 """
 This module saves a json associating each molecule involved in relevent reactions
