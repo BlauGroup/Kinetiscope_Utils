@@ -32,20 +32,64 @@ and outputs those concentrations as text files.
 """
 
 def validate_species_to_name(species_dict):
+    """
+    Determines whether or not we have the data we need to generate a name for 
+    a given species. If we do, returns that data, otherwise, raises a KeyError.
+
+    Parameters
+    ----------
+    species_dict : dictionary
+        dictionary associated with a given species loaded from json
+
+    Raises
+    ------
+    KeyError
+        raises a key error if this dictionary is missing graph or molecule
+        data
+
+    Returns
+    -------
+    species_graph : networkx graph
+        networkx undirected graph associated with this species
+    species_pymatgen_mol : pymatgen Molecule object
+        the Molecule object associated with this species.
+
+    """
     species_node_link_data = species_dict.get("nx_graph", False)
     species_graph = nx.node_link_graph(species_node_link_data)
     species_pymatgen_mol = species_dict.get("molecule", False)
     
     if not species_graph or not species_pymatgen_mol:
-        raise ValueError("Missing required keys 'nx_graph' or 'molecule' in species_to_name.")
+        raise KeyError("Missing required keys 'nx_graph' or 'molecule' in species_to_name.")
     
     return species_graph, species_pymatgen_mol
 
-def update_species_name(species_name, name, number):
-    if name not in species_name:
-        species_name += name + '_'
+def update_species_name(species_name, func_group_name, func_name_already_added):
+    """
+    Adds the name of the functional group present within the molecule to its
+    species name, accounting for the name of the functional group already 
+    having been added to the name. 
+
+    Parameters
+    ----------
+    species_name : string
+        current name generated for the species
+    func_group_name : string
+        name of the functional group being added to the species name
+    func_name_already_added : Boolean
+        True if the name of this functional group is already in the species name,
+        False otherwise.
+
+    Returns
+    -------
+    species_name : string
+        the updated name of this species
+
+    """
+    if func_group_name not in species_name:
+        species_name += func_group_name + '_'
     else:
-        if number:
+        if func_name_already_added:
             current_number_present = int(species_name[-2])
             new_number = current_number_present + 1
             species_name = species_name[:-2] + str(new_number) + '_'
@@ -55,6 +99,23 @@ def update_species_name(species_name, name, number):
     return species_name
 
 def update_remaining_species_graph(remaining_species_graph, func_group_locations):
+    """
+    
+
+    Parameters
+    ----------
+    remaining_species_graph : networkx undirected graph
+        The graph of a given species after the nodes associated with a
+        functional group have been removed.
+    func_group_locations : generator
+        generator over isomorphisms between a subgraph of two graphs
+
+    Returns
+    -------
+    remaining_species_graph : networkx undirected graph
+        the graph of the species with the functional group removed.
+
+    """
     for atom_index in func_group_locations[0].keys():
         remaining_species_graph.remove_node(atom_index)
     
@@ -81,11 +142,14 @@ def generate_species_name(species_dict, func_group_dict):
     remaining_species_graph = copy.deepcopy(species_graph)
     species_name = ""
 
-    for name, group_graph in func_group_dict.items():
-        func_group_present = functional_group_present(remaining_species_graph, group_graph)[0]
-        func_group_locations = list(functional_group_present(remaining_species_graph, group_graph)[1])
+    for func_group_name, func_group_graph in func_group_dict.items():
+        func_group_present, func_group_locations = functional_group_present(remaining_species_graph, func_group_graph)
         while func_group_present:
-            species_name = update_species_name(species_name, name, species_name[-2].isnumeric())
+            if species_name:
+                func_name_already_added = species_name[-2].isnumeric()
+            else:
+                func_name_already_added = False
+            species_name = update_species_name(species_name, func_group_name, func_name_already_added)
             remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_locations)
     
     species_name = update_species_name_with_atom_composition(species_name, name, remaining_species_graph) \
@@ -104,9 +168,9 @@ def functional_group_present(mol_graph, func):
     
     Parameters
     ----------
-    mol_graph : Networkx Undirected Graph
+    mol_graph : Networkx undirected graph
         Graph of the molecule you want to name
-    func : Networkx Undirected Graph
+    func : Networkx undirected graph
         Graph of the functional group
 
     Returns
@@ -255,49 +319,49 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
 
 #     dumpfn(data, path)
 
-start = time.time()
-os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424\func_groups")
-# folder = "to_import"
-# original_directory = os.getcwd()
-# new_dir = os.path.join(original_directory, folder)
-# os.mkdir(new_dir)
-# excel_dir = os.path.join(original_directory, folder)
+# Change directory to the functional groups folder
+func_groups_dir = r"G:\My Drive\Kinetiscope\import_test_021424\func_groups"
+os.chdir(func_groups_dir)
 
+# Process functional groups' XYZ files
 print('Associating functional groups with their Molecule objects...')
-
-func_group_dict = {} #take a group of xyz files associated with our functional groups and generate a dictionary associating the molecule graph of that functional group with its name
+func_group_dict = {}
 
 for filename in glob.glob('*.xyz'):
-  
-    func_group = Molecule.from_file(filename)  # pymatgen Molecule
-    func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order = False))  # pymatgen mol_graph
-    func_group_multigraph = func_group_mol_graph.graph #networkx multigraph
-    group_undirected_graph = nx.Graph(func_group_multigraph) #networkx undirected graph
+    func_group = Molecule.from_file(filename)  # Load functional group as a Molecule
+    func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False))
+    func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph)
     name = filename.replace('.xyz', '')
-    func_group_dict[name] = group_undirected_graph
-    
-print('Done!')
+    func_group_dict[name] = func_group_undirected_graph
 
+print('Functional group association completed.')
+
+# Load molecule data and generate species names
 os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424")
-json = "mpcule_id_molecule_association.json"
-mpcule_id_molecule_dict = loadfn(json)
+mpcule_id_molecule_association_file = "mpcule_id_molecule_association.json"
+mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file)
 
 mpcule_name_dict = {}
 name_mpcule_dict = {}
 stereo_dict = {}
-names = set()
 
-for mpculeid, mol_dict in mpcule_id_molecule_dict.items():
-    test_name = generate_species_name(mol_dict, func_group_dict)
-    if test_name in stereo_dict:
-        update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid)
+# Process each molecule and generate a species name
+for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
+    species_name = generate_species_name(species_dict, func_group_dict)
+    
+    # Check and update stereo_dict if necessary
+    if species_name in stereo_dict:
+        update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
     else:
-        mpcule_name_dict[mpculeid] = test_name
-        name_mpcule_dict[test_name] = mpculeid
-        stereo_dict[test_name] = [test_name]
+        mpcule_name_dict[mpcule_id] = species_name
+        name_mpcule_dict[species_name] = mpcule_id
+        stereo_dict[species_name] = [species_name]
+
+print('Species names generated.')
+
+# Finalize and output results
 reactions_added = set()
 reactions = []
-
 print(mpcule_name_dict)
 # print('Naming Molecules...')
 
