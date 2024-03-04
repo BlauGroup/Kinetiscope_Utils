@@ -20,6 +20,7 @@ import csv
 # import sqlite3
 import copy
 import operator
+import sys
 
 #TODO investigate why TPS_2+ is just TPS_2
 
@@ -98,7 +99,7 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
     
     return species_name
 
-def update_remaining_species_graph(remaining_species_graph, func_group_locations):
+def update_remaining_species_graph(remaining_species_graph, func_group_loc):
     """
     
 
@@ -116,24 +117,23 @@ def update_remaining_species_graph(remaining_species_graph, func_group_locations
         the graph of the species with the functional group removed.
 
     """
-    for atom_index in func_group_locations[0].keys():
+    for atom_index in func_group_loc.keys():
         remaining_species_graph.remove_node(atom_index)
     
     return remaining_species_graph
 
 def update_species_name_with_atom_composition(species_name, name, remaining_species_graph):
-    if species_name and remaining_species_graph:
-        atom_composition = ""
-        for node in remaining_species_graph.nodes(data=True):
-            element = node[1]['specie']
-            if element in atom_composition:
-                element_index = atom_composition.index(element)
-                old_number = int(atom_composition[element_index + 1])
-                new_number = old_number + 1
-                atom_composition = atom_composition[:-1] + str(new_number)
-            else:
-                atom_composition += element + "1"
-        species_name += name + atom_composition + '_'
+    atom_composition = ""
+    for node in remaining_species_graph.nodes(data=True):
+        element = node[1]['specie']
+        if element in atom_composition:
+            element_index = atom_composition.index(element)
+            old_number = int(atom_composition[element_index + 1])
+            new_number = old_number + 1
+            atom_composition = atom_composition[:-1] + str(new_number)
+        else:
+            atom_composition += element + "1"
+    species_name += name + atom_composition + '_'
     
     return species_name
 
@@ -143,19 +143,19 @@ def generate_species_name(species_dict, func_group_dict):
     species_name = ""
 
     for func_group_name, func_group_graph in func_group_dict.items():
-        func_group_present, func_group_locations = functional_group_present(remaining_species_graph, func_group_graph)
-        while func_group_present:
+        func_group_loc = functional_group_present(remaining_species_graph, func_group_graph)
+        while func_group_loc:
             if species_name:
                 func_name_already_added = species_name[-2].isnumeric()
             else:
                 func_name_already_added = False
             species_name = update_species_name(species_name, func_group_name, func_name_already_added)
-            remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_locations)
+            remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_loc)
+            func_group_loc = functional_group_present(remaining_species_graph, func_group_graph)
     
-    species_name = update_species_name_with_atom_composition(species_name, name, remaining_species_graph) \
-                    if species_name else str(species_pymatgen_mol.molecule.composition).replace(" ", "") + '_'
-
-    charge_suffix = "+" if species_pymatgen_mol.molecule.charge == 1 else str(species_pymatgen_mol.molecule.charge)
+    species_name = update_species_name_with_atom_composition(species_name, name, remaining_species_graph) 
+        
+    charge_suffix = "+" if species_pymatgen_mol.charge == 1 else str(species_pymatgen_mol.charge)
     species_name += charge_suffix
 
     return species_name
@@ -186,7 +186,7 @@ def functional_group_present(mol_graph, func):
     """
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
-    return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
+    return isomorphism.mapping
 
 def stereoisomer_test(stereoisomer_list, name):
     """
@@ -362,7 +362,7 @@ print('Species names generated.')
 # Finalize and output results
 reactions_added = set()
 reactions = []
-print(mpcule_name_dict)
+# print(mpcule_name_dict)
 # print('Naming Molecules...')
 
 # # reactions_added = set()
