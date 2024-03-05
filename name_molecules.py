@@ -117,23 +117,24 @@ def update_remaining_species_graph(remaining_species_graph, func_group_loc):
         the graph of the species with the functional group removed.
 
     """
-    for atom_index in func_group_loc.keys():
+    for atom_index in func_group_loc:
         remaining_species_graph.remove_node(atom_index)
     
     return remaining_species_graph
 
-def update_species_name_with_atom_composition(species_name, name, remaining_species_graph):
-    atom_composition = ""
+def update_species_name_with_atom_composition(species_name, remaining_species_graph):
+    atom_composition = {}
     for node in remaining_species_graph.nodes(data=True):
         element = node[1]['specie']
         if element in atom_composition:
-            element_index = atom_composition.index(element)
-            old_number = int(atom_composition[element_index + 1])
-            new_number = old_number + 1
-            atom_composition = atom_composition[:-1] + str(new_number)
+            atom_composition[element] += 1
         else:
-            atom_composition += element + "1"
-    species_name += name + atom_composition + '_'
+            atom_composition[element] = 1
+    
+    for element, count in atom_composition.items():
+        species_name += f"{element}{count}"
+
+    # species_name += f"_{name}_"
     
     return species_name
 
@@ -153,9 +154,9 @@ def generate_species_name(species_dict, func_group_dict):
             remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_loc)
             func_group_loc = functional_group_present(remaining_species_graph, func_group_graph)
     
-    species_name = update_species_name_with_atom_composition(species_name, name, remaining_species_graph) 
+    species_name = update_species_name_with_atom_composition(species_name, remaining_species_graph)
         
-    charge_suffix = "+" if species_pymatgen_mol.charge == 1 else str(species_pymatgen_mol.charge)
+    charge_suffix = "+1" if species_pymatgen_mol.charge == 1 else str(species_pymatgen_mol.charge)
     species_name += charge_suffix
 
     return species_name
@@ -186,8 +187,54 @@ def functional_group_present(mol_graph, func):
     """
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
-    return isomorphism.mapping
+    return isomorphism.subgraph_isomorphisms_iter()
 
+# def stereoisomer_test(stereoisomer_list, name):
+#     """
+#     Structural isomers--species with the same formula but different graphs--will return
+#     the same name when the name_molecule function is called. This function
+#     numbers each stereoisomer such that the new names are unique.
+
+#     Parameters
+#     ----------
+#     name_dict : dictionary
+#         dictionary whose keys are names and values are entry_ids of the species
+#         associated with that name
+#     mol_entry_id : string
+#         the unique entry id associated with a species
+#     mol_name : string
+#         the name generated for a species from the name_molecule function, which
+#         may not yet be unique
+
+#     Returns
+#     -------
+#     stereos : dictionary
+#         a dictionary of length 1 or 2, whose keys are now unique names of stereoisomers
+#         and values are entryids
+
+#     """
+#     new_stereos_list = []
+#     if len(stereoisomer_list) == 1:
+#         name_1 = name + '_#1'
+#         name_2 = name + '_#2'
+#         new_stereos_list.append(name_1)
+#         new_stereos_list.append(name_2)
+#     else:
+#         current_max_num = str(len(stereoisomer_list))
+#         new_stereos_list = stereoisomer_list
+#         new_isomer = name + '#_' + current_max_num
+#         new_stereos_list.append(new_isomer)
+#     return new_stereos_list
+
+# def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
+#     current_stereos = stereo_dict.get(test_name)
+#     new_stereos = stereoisomer_test(current_stereos, test_name)
+#     stereo_dict[test_name] = new_stereos
+    
+#     old_stereo_mpculeid = name_mpcule_dict.get(test_name, False)
+#     if old_stereo_mpculeid:
+#         name_mpcule_dict[old_stereo_mpculeid] = new_stereos[-2]
+    # name_mpcule_dict[mpculeid] = new_stereos[-1]
 def stereoisomer_test(stereoisomer_list, name):
     """
     Structural isomers--species with the same formula but different graphs--will return
@@ -218,10 +265,12 @@ def stereoisomer_test(stereoisomer_list, name):
         name_2 = name + '_#2'
         new_stereos_list.append(name_1)
         new_stereos_list.append(name_2)
+        # print("New stereoisomers:", new_stereos_list)
     else:
-        current_max_num = str(len(stereoisomer_list))
+        current_max_num = len(stereoisomer_list)
+        new_max_num_str = str(current_max_num + 1)
         new_stereos_list = stereoisomer_list
-        new_isomer = name + '#_' + current_max_num
+        new_isomer = name + "_#" + new_max_num_str
         new_stereos_list.append(new_isomer)
     return new_stereos_list
 
@@ -234,6 +283,10 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
     if old_stereo_mpculeid:
         name_mpcule_dict[old_stereo_mpculeid] = new_stereos[-2]
     name_mpcule_dict[mpculeid] = new_stereos[-1]
+    # print("Updated stereo dictionary:", stereo_dict)
+    # print("Updated name_molecule dictionary:", name_mpcule_dict)
+    # Terminate the program
+    
     
 
 # def write_reaction(reaction_dict, mpculid_dict): #convert to strings of the appropriate format for kinetiscope
