@@ -99,9 +99,11 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
     
     return species_name
 
-def update_remaining_species_graph(remaining_species_graph, func_group_loc):
+def update_remaining_species_graph(remaining_species_graph, func_group_mappings):
     """
-    
+    Networkx returns a mapping between a subgraph of our species and a functional
+    group graph. This function deletes the atoms from a copy of the species graph
+    to "remove" that instance of the functional group.
 
     Parameters
     ----------
@@ -117,7 +119,8 @@ def update_remaining_species_graph(remaining_species_graph, func_group_loc):
         the graph of the species with the functional group removed.
 
     """
-    for atom_index in func_group_loc:
+    to_remove = func_group_mappings[0].keys() #we only care about one possible mapping b/c we remove iteratively
+    for atom_index in to_remove:
         remaining_species_graph.remove_node(atom_index)
     
     return remaining_species_graph
@@ -144,19 +147,20 @@ def generate_species_name(species_dict, func_group_dict):
     species_name = ""
 
     for func_group_name, func_group_graph in func_group_dict.items():
-        func_group_loc = functional_group_present(remaining_species_graph, func_group_graph)
-        while func_group_loc:
+        func_group_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+        while func_group_present:
+            mappings_list = list(func_group_mappings) #ensures we only make this list if we have found a functional group
             if species_name:
-                func_name_already_added = species_name[-2].isnumeric()
+                func_name_already_added_test = species_name[-2].isnumeric()
             else:
-                func_name_already_added = False
-            species_name = update_species_name(species_name, func_group_name, func_name_already_added)
-            remaining_species_graph = update_remaining_species_graph(remaining_species_graph, func_group_loc)
-            func_group_loc = functional_group_present(remaining_species_graph, func_group_graph)
+                func_name_already_added_test = False
+            species_name = update_species_name(species_name, func_group_name, func_name_already_added_test)
+            remaining_species_graph = update_remaining_species_graph(remaining_species_graph, mappings_list)
+            func_group_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
     
     species_name = update_species_name_with_atom_composition(species_name, remaining_species_graph)
         
-    charge_suffix = "+1" if species_pymatgen_mol.charge == 1 else str(species_pymatgen_mol.charge)
+    charge_suffix = "_+1" if species_pymatgen_mol.charge == 1 else "_" + str(species_pymatgen_mol.charge)
     species_name += charge_suffix
 
     return species_name
@@ -187,7 +191,7 @@ def functional_group_present(mol_graph, func):
     """
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
-    return isomorphism.subgraph_isomorphisms_iter()
+    return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
 
 # def stereoisomer_test(stereoisomer_list, name):
 #     """
@@ -380,7 +384,7 @@ os.chdir(func_groups_dir)
 print('Associating functional groups with their Molecule objects...')
 func_group_dict = {}
 
-for filename in glob.glob('*.xyz'):
+for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups for the larger stereoisomers
     func_group = Molecule.from_file(filename)  # Load functional group as a Molecule
     func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False))
     func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph)
@@ -410,11 +414,12 @@ for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
         name_mpcule_dict[species_name] = mpcule_id
         stereo_dict[species_name] = [species_name]
 
-print('Species names generated.')
+total_num_names = len(name_mpcule_dict)
+print(f"total number of species named: {total_num_names}")
 
 # Finalize and output results
-reactions_added = set()
-reactions = []
+# reactions_added = set()
+# reactions = []
 # print(mpcule_name_dict)
 # print('Naming Molecules...')
 
