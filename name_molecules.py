@@ -22,7 +22,6 @@ import copy
 import operator
 import sys
 
-#TODO investigate why TPS_2+ is just TPS_2
 
 """
 This module saves a json associating each molecule involved in relevent reactions
@@ -56,15 +55,34 @@ def validate_species_to_name(species_dict):
         the Molecule object associated with this species.
 
     """
-    species_node_link_data = species_dict.get("nx_graph", False)
-    species_graph = nx.node_link_graph(species_node_link_data)
+    graph_data = species_dict.get("nx_graph", False)
     species_pymatgen_mol = species_dict.get("molecule", False)
     
-    if not species_graph or not species_pymatgen_mol:
+    if not species_dict or not species_pymatgen_mol:
         raise KeyError("Missing required keys 'nx_graph' or 'molecule' in species_to_name.")
+    
+    species_graph = build_species_graph(graph_data)
     
     return species_graph, species_pymatgen_mol
 
+def build_species_graph(graph_data):
+    graph = nx.Graph()
+
+    # Add nodes with attributes
+    for node_data in graph_data['nodes']:
+        node_id = node_data['id']
+        attributes = {key: value for key, value in node_data.items() if key != 'id'}
+        graph.add_node(node_id, **attributes)
+
+    # Add edges with weights
+    for link_data in graph_data['links']:
+        source = link_data['source']
+        target = link_data['target']
+        weight = link_data.get('weight', 1)  # Assign weight 1 if not given
+        graph.add_edge(source, target, weight=weight)
+
+    return graph
+    
 def update_species_name(species_name, func_group_name, func_name_already_added):
     """
     Adds the name of the functional group present within the molecule to its
@@ -88,14 +106,17 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
 
     """
     if func_group_name not in species_name:
-        species_name += func_group_name + '_'
+        if species_name:
+            species_name += "_" + func_group_name
+        else:
+            species_name += func_group_name
     else:
         if func_name_already_added:
             current_number_present = int(species_name[-2])
             new_number = current_number_present + 1
-            species_name = species_name[:-2] + str(new_number) + '_'
+            species_name = species_name[:-2] + str(new_number)
         else:
-            species_name = species_name[:-1] + '2_'
+            species_name = species_name[:-1]
     
     return species_name
 
@@ -126,6 +147,10 @@ def update_remaining_species_graph(remaining_species_graph, func_group_mappings)
     return remaining_species_graph
 
 def update_species_name_with_atom_composition(species_name, remaining_species_graph):
+    if not remaining_species_graph:
+        species_name += "_"
+        return species_name
+    
     atom_composition = {}
     for node in remaining_species_graph.nodes(data=True):
         element = node[1]['specie']
@@ -137,6 +162,7 @@ def update_species_name_with_atom_composition(species_name, remaining_species_gr
     for element, count in atom_composition.items():
         species_name += f"{element}{count}"
 
+    species_name += "_"
     # species_name += f"_{name}_"
     
     return species_name
@@ -159,8 +185,9 @@ def generate_species_name(species_dict, func_group_dict):
             func_group_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
     
     species_name = update_species_name_with_atom_composition(species_name, remaining_species_graph)
-        
-    charge_suffix = "_+1" if species_pymatgen_mol.charge == 1 else "_" + str(species_pymatgen_mol.charge)
+    species_charge = species_pymatgen_mol.charge
+    species_charge_str = str(species_charge)
+    charge_suffix = "+" + species_charge_str if species_charge >= 1 else species_charge_str
     species_name += charge_suffix
 
     return species_name
@@ -273,20 +300,22 @@ def stereoisomer_test(stereoisomer_list, name):
     else:
         current_max_num = len(stereoisomer_list)
         new_max_num_str = str(current_max_num + 1)
-        new_stereos_list = stereoisomer_list
         new_isomer = name + "_#" + new_max_num_str
+        new_stereos_list = new_stereos_list + stereoisomer_list
         new_stereos_list.append(new_isomer)
     return new_stereos_list
 
 def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
-    current_stereos = stereo_dict.get(test_name)
-    new_stereos = stereoisomer_test(current_stereos, test_name)
-    stereo_dict[test_name] = new_stereos
+    current_stereos = stereo_dict.get(test_name) 
+    new_stereos = stereoisomer_test(current_stereos, test_name) 
+    stereo_dict[test_name] = new_stereos 
     
-    old_stereo_mpculeid = name_mpcule_dict.get(test_name, False)
-    if old_stereo_mpculeid:
-        name_mpcule_dict[old_stereo_mpculeid] = new_stereos[-2]
-    name_mpcule_dict[mpculeid] = new_stereos[-1]
+    old_mpculeid = name_mpcule_dict.get(test_name, False) #only 
+    if old_mpculeid: 
+        name_mpcule_dict[new_stereos[-2]] =  old_mpculeid #we assign this one just so the following line is valid regardless of whether or not this test fired
+        name_mpcule_dict.pop(test_name)
+        
+    name_mpcule_dict[new_stereos[-1]] = mpculeid
     # print("Updated stereo dictionary:", stereo_dict)
     # print("Updated name_molecule dictionary:", name_mpcule_dict)
     # Terminate the program
@@ -396,11 +425,11 @@ print('Functional group association completed.')
 # Load molecule data and generate species names
 os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424")
 mpcule_id_molecule_association_file = "mpcule_id_molecule_association.json"
-mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file)
+mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file) 
+number_to_name = len(mpcule_id_molecule_dict)
 
-mpcule_name_dict = {}
 name_mpcule_dict = {}
-stereo_dict = {}
+stereo_dict = {} #assocites a given base name with all of its stereoisomers
 
 # Process each molecule and generate a species name
 for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
@@ -410,13 +439,15 @@ for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
     if species_name in stereo_dict:
         update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
     else:
-        mpcule_name_dict[mpcule_id] = species_name
         name_mpcule_dict[species_name] = mpcule_id
         stereo_dict[species_name] = [species_name]
+
+number_named = len(name_mpcule_dict)
 
 total_num_names = len(name_mpcule_dict)
 print(f"total number of species named: {total_num_names}")
 
+assert number_named == number_to_name
 # Finalize and output results
 # reactions_added = set()
 # reactions = []
