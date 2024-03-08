@@ -105,18 +105,25 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
         the updated name of this species
 
     """
-    if func_group_name not in species_name:
-        if species_name:
-            species_name += "_" + func_group_name
-        else:
-            species_name += func_group_name
-    else:
-        if func_name_already_added:
+    if func_name_already_added:
+        if species_name[-2].isnumeric():
             current_number_present = int(species_name[-2])
             new_number = current_number_present + 1
             species_name = species_name[:-2] + str(new_number)
         else:
-            species_name = species_name[:-1]
+            species_name = species_name[:-1] + str(2)
+        
+    else:
+        # if species_name:
+        species_name += func_group_name 
+    species_name = species_name + "_"
+        # else:
+        #     species_name += func_group_name + "_"
+    # else:
+        # if func_name_already_added:
+        
+        # else:
+        #     species_name = species_name[:-1]
     
     return species_name
 
@@ -161,8 +168,8 @@ def update_species_name_with_atom_composition(species_name, remaining_species_gr
     
     for element, count in atom_composition.items():
         species_name += f"{element}{count}"
-
-    species_name += "_"
+    # if not species_name.count("_") == 1:
+    
     # species_name += f"_{name}_"
     
     return species_name
@@ -176,15 +183,18 @@ def generate_species_name(species_dict, func_group_dict):
         func_group_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
         while func_group_present:
             mappings_list = list(func_group_mappings) #ensures we only make this list if we have found a functional group
-            if species_name:
-                func_name_already_added_test = species_name[-2].isnumeric()
-            else:
-                func_name_already_added_test = False
+            func_name_already_added_test = False
+            if func_group_name in species_name:
+                func_name_already_added_test = True
             species_name = update_species_name(species_name, func_group_name, func_name_already_added_test)
             remaining_species_graph = update_remaining_species_graph(remaining_species_graph, mappings_list)
             func_group_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
     
     species_name = update_species_name_with_atom_composition(species_name, remaining_species_graph)
+    if not species_name[-1] == "_":
+        species_name += "_"
+    elif species_name[-2] == "_":
+        species_name = species_name[:-1]
     species_charge = species_pymatgen_mol.charge
     species_charge_str = str(species_charge)
     charge_suffix = "+" + species_charge_str if species_charge >= 1 else species_charge_str
@@ -192,7 +202,7 @@ def generate_species_name(species_dict, func_group_dict):
 
     return species_name
 
-def functional_group_present(mol_graph, func):
+def functional_group_present(mol_graph, func): #tested and working correctly
     """
     Tests whether or not a given functional group is present in a molecule via
     testing if the Networkx graphical representation of a molecule contains a 
@@ -219,6 +229,7 @@ def functional_group_present(mol_graph, func):
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
     return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
+
 
 # def stereoisomer_test(stereoisomer_list, name):
 #     """
@@ -405,7 +416,7 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
 
 #     dumpfn(data, path)
 
-# Change directory to the functional groups folder
+#Change directory to the functional groups folder
 func_groups_dir = r"G:\My Drive\Kinetiscope\import_test_021424\func_groups"
 os.chdir(func_groups_dir)
 
@@ -417,6 +428,7 @@ for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups
     func_group = Molecule.from_file(filename)  # Load functional group as a Molecule
     func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False))
     func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph)
+    
     name = filename.replace('.xyz', '')
     func_group_dict[name] = func_group_undirected_graph
 
