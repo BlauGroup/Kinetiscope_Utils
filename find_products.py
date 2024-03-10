@@ -25,7 +25,7 @@ def read_lines_and_process(file_path, line_numbers):
 
 os.chdir("G:\My Drive\Kinetiscope\Allabsorbers_020524")
 
-name_list, initial_conc_list, final_conc_list = read_lines_and_process("initial_full_exposure.txt", [9, 12, 996])
+name_list, initial_conc_list, final_conc_list = read_lines_and_process("duplicatesremoved_full_exposure.txt", [9, 12, 980])
 
 final_conc_list = [float(value) for value in final_conc_list] #helps with sorting later
 
