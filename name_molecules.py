@@ -128,6 +128,7 @@ def functional_group_present(mol_graph, func):
     
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
+    
     return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
 
 def update_species_name(species_name, func_group_name, func_name_already_added):
@@ -162,6 +163,7 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
             species_name = species_name[:-1] + str(2)  
     else:
         species_name += func_group_name 
+        
     species_name = species_name + "_"
     
     return species_name
@@ -174,7 +176,7 @@ def update_remaining_species_graph(remaining_species_graph, func_group_mappings)
 
     Parameters
     ----------
-    remaining_species_graph : networkx undirected graph
+    remaining_species_graph : networkx Graph object
         The graph of a given species after the nodes associated with a
         functional group have been removed.
     func_group_locations : generator
@@ -182,7 +184,7 @@ def update_remaining_species_graph(remaining_species_graph, func_group_mappings)
 
     Returns
     -------
-    remaining_species_graph : networkx undirected graph
+    remaining_species_graph : networkx Graph object
         the graph of the species with the functional group removed.
 
     """
@@ -194,10 +196,37 @@ def update_remaining_species_graph(remaining_species_graph, func_group_mappings)
     return remaining_species_graph
 
 def update_name_and_graph(species_name, func_group_name, remaining_species_graph, func_group_mappings):
+    """
+    Converts the subgraph isomorphism mapping to a list, tests the name of the
+    functional group is already present in species_name, and calls functions
+    to update the species name and graph before finally returning them.
+
+    Parameters
+    ----------
+    species_name : string
+        current name of the species
+    func_group_name : string
+        name of the functional group to be added to species_name
+    remaining_species_graph : networkx Graph object
+        current graph of the species
+    func_group_mappings : generator
+        generator over isomorphisms between a subgraph of one graph and
+        another graph
+
+    Returns
+    -------
+    species_name : string
+        the species name with the functional group added
+    remaining_species_graph : networkx Graph object
+        graph of the species after the functional group is removed
+
+    """
+    
     mappings_list = list(func_group_mappings)
     func_name_already_added = func_group_name in species_name
     species_name = update_species_name(species_name, func_group_name, func_name_already_added)
     remaining_species_graph = update_remaining_species_graph(remaining_species_graph, mappings_list)
+    
     return species_name, remaining_species_graph
 
 def add_composition(species_name, remaining_species_graph):
@@ -232,13 +261,71 @@ def add_composition(species_name, remaining_species_graph):
 
     for element, count in atom_composition.items():
         species_name += f"{element}{count}"
+        
+    species_name = species_name + "_"
     
     return species_name
 
 def add_charge(species_name, charge):
+    """
+    Simple function for adding the charge of a species to its name.
+
+    Parameters
+    ----------
+    species_name : string
+        current name of the species
+    charge : int
+        charge of the species
+
+    Returns
+    -------
+    species_name : string
+        species name with the charge added to the end
+
+    """
+    
     charge_str = str(charge)
     charge_suffix = "+" + charge_str if charge >= 1 else charge_str
     species_name += charge_suffix
+    
+    return species_name
+
+def generate_species_name(species_dict, func_group_dict):
+    """
+    Generates a name for a species based on the functional groups it contains.
+    
+    Parameters
+    ----------
+    species_dict : dict
+        a dictionary containing information related to the species
+    func_group_dict : dict
+        a dictionary whose keys are names (strings) and whose values are 
+        networkx undirected graphs associated with a given functional group
+    
+    Returns
+    -------
+    species_name : string
+        the name generated for the species
+    
+    """
+    
+    species_graph, species_pymatgen_mol = validate_species_to_name(species_dict)
+    remaining_species_graph = copy.deepcopy(species_graph)
+    species_name = ""
+
+    for func_group_name, func_group_graph in func_group_dict.items():
+        func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+        
+        while func_group_is_present:
+            species_name, remaining_species_graph = update_name_and_graph(species_name, func_group_name, remaining_species_graph, func_group_mappings)
+            func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+    
+    if remaining_species_graph: #i.e. not all atoms are accounted for in the name
+        species_name = add_composition(species_name, remaining_species_graph)
+        
+    species_charge = species_pymatgen_mol.charge #add charge to the name
+    species_name = add_charge(species_name, species_charge)
+    
     return species_name
 
 def name_stereoisomers(stereoisomer_list, name):
@@ -267,7 +354,7 @@ def name_stereoisomers(stereoisomer_list, name):
     """
     
     new_stereos_list = []
-    if len(stereoisomer_list) == 1:
+    if len(stereoisomer_list) == 1: #i.e. only one other species with this name
         name_1 = name + '_#1'
         name_2 = name + '_#2'
         new_stereos_list.append(name_1)
@@ -278,6 +365,7 @@ def name_stereoisomers(stereoisomer_list, name):
         new_isomer = name + "_#" + new_max_num_str
         new_stereos_list = new_stereos_list + stereoisomer_list
         new_stereos_list.append(new_isomer)
+        
     return new_stereos_list
 
 def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
@@ -314,90 +402,47 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
         
     name_mpcule_dict[new_stereos[-1]] = mpculeid 
     
-def generate_species_name(species_dict, func_group_dict):
-    """
-    Generates a name for a species based on the functional groups it contains.
-    
-    Parameters
-    ----------
-    species_dict : dict
-        a dictionary containing information related to the species
-    func_group_dict : dict
-        a dictionary whose keys are names (strings) and whose values are 
-        networkx undirected graphs associated with a given functional group
-    
-    Returns
-    -------
-    species_name : string
-        the name generated for the species
-    
-    """
-    
-    species_graph, species_pymatgen_mol = validate_species_to_name(species_dict)
-    remaining_species_graph = copy.deepcopy(species_graph)
-    species_name = ""
+# #Change directory to the functional groups folder
+# func_groups_dir = r"G:\My Drive\Kinetiscope\import_test_021424\func_groups"
+# os.chdir(func_groups_dir)
 
-    for func_group_name, func_group_graph in func_group_dict.items():
-        func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+# # Process functional groups' XYZ files
+# print('Associating functional groups with their Molecule objects...')
+# func_group_dict = {}
+
+# for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups for the larger stereoisomers
+#     func_group = Molecule.from_file(filename)  # Load functional group as a pymatgen Molecule
+#     func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False)) #build pymatgen MoleculeGraph
+#     func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph) #convert graph to networkx undirected graph
+    
+#     name = filename.replace('.xyz', '')
+#     func_group_dict[name] = func_group_undirected_graph
+
+# print('Functional group association completed.')
+
+# # Load molecule data and generate species names
+# os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424")
+# mpcule_id_molecule_association_file = "mpcule_id_molecule_association.json"
+# mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file) 
+# number_to_name = len(mpcule_id_molecule_dict)
+
+# name_mpcule_dict = {}
+# stereo_dict = {} #assocites a given base name with all of its stereoisomers
+
+# # Process each molecule and generate a species name
+# for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
+#     species_name = generate_species_name(species_dict, func_group_dict)
+    
+#     if species_name in stereo_dict:
+#         update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
         
-        while func_group_is_present:
-            species_name, remaining_species_graph = update_name_and_graph(species_name, func_group_name, remaining_species_graph, func_group_mappings)
-            func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
-    
-    if remaining_species_graph: #i.e. not all atoms are accounted for in the name
-        species_name = add_composition(species_name, remaining_species_graph)
-    
-    if not species_name[-1] == "_":
-        species_name += "_"
-    elif species_name[-2] == "_":
-        species_name = species_name[:-1]
-        
-    species_charge = species_pymatgen_mol.charge #add charge to the name
-    species_name = add_charge(species_name, species_charge)
-    
-    return species_name
+#     else:
+#         name_mpcule_dict[species_name] = mpcule_id
+#         stereo_dict[species_name] = [species_name]
 
-#Change directory to the functional groups folder
-func_groups_dir = r"G:\My Drive\Kinetiscope\import_test_021424\func_groups"
-os.chdir(func_groups_dir)
+# number_named = len(name_mpcule_dict)
 
-# Process functional groups' XYZ files
-print('Associating functional groups with their Molecule objects...')
-func_group_dict = {}
+# total_num_names = len(name_mpcule_dict)
+# print(f"total number of species named: {total_num_names}")
 
-for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups for the larger stereoisomers
-    func_group = Molecule.from_file(filename)  # Load functional group as a Molecule
-    func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False))
-    func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph)
-    
-    name = filename.replace('.xyz', '')
-    func_group_dict[name] = func_group_undirected_graph
-
-print('Functional group association completed.')
-
-# Load molecule data and generate species names
-os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424")
-mpcule_id_molecule_association_file = "mpcule_id_molecule_association.json"
-mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file) 
-number_to_name = len(mpcule_id_molecule_dict)
-
-name_mpcule_dict = {}
-stereo_dict = {} #assocites a given base name with all of its stereoisomers
-
-# Process each molecule and generate a species name
-for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
-    species_name = generate_species_name(species_dict, func_group_dict)
-    
-    # Check and update stereo_dict if necessary
-    if species_name in stereo_dict:
-        update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
-    else:
-        name_mpcule_dict[species_name] = mpcule_id
-        stereo_dict[species_name] = [species_name]
-
-number_named = len(name_mpcule_dict)
-
-total_num_names = len(name_mpcule_dict)
-print(f"total number of species named: {total_num_names}")
-
-assert number_named == number_to_name
+# assert number_named == number_to_name
