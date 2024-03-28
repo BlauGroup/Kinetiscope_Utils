@@ -5,22 +5,8 @@ Created on Wed May 10 13:26:19 2023
 @author: JRMilton
 """
 
-from pymatgen.core.structure import Molecule
-from pymatgen.analysis.graphs import MoleculeGraph
-from pymatgen.analysis.local_env import OpenBabelNN
-# from mc_analysis import ReportGenerator
-import glob
-# import pickle
-from monty.serialization import loadfn, dumpfn
-import os
 import copy
 import networkx as nx
-import time
-import csv
-# import sqlite3
-import copy
-import operator
-import sys
 
 
 """
@@ -402,47 +388,3 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
         
     name_mpcule_dict[new_stereos[-1]] = mpculeid 
     
-# #Change directory to the functional groups folder
-# func_groups_dir = r"G:\My Drive\Kinetiscope\import_test_021424\func_groups"
-# os.chdir(func_groups_dir)
-
-# # Process functional groups' XYZ files
-# print('Associating functional groups with their Molecule objects...')
-# func_group_dict = {}
-
-# for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups for the larger stereoisomers
-#     func_group = Molecule.from_file(filename)  # Load functional group as a pymatgen Molecule
-#     func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False)) #build pymatgen MoleculeGraph
-#     func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph) #convert graph to networkx undirected graph
-    
-#     name = filename.replace('.xyz', '')
-#     func_group_dict[name] = func_group_undirected_graph
-
-# print('Functional group association completed.')
-
-# # Load molecule data and generate species names
-# os.chdir(r"G:\My Drive\Kinetiscope\import_test_021424")
-# mpcule_id_molecule_association_file = "mpcule_id_molecule_association.json"
-# mpcule_id_molecule_dict = loadfn(mpcule_id_molecule_association_file) 
-# number_to_name = len(mpcule_id_molecule_dict)
-
-# name_mpcule_dict = {}
-# stereo_dict = {} #assocites a given base name with all of its stereoisomers
-
-# # Process each molecule and generate a species name
-# for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
-#     species_name = generate_species_name(species_dict, func_group_dict)
-    
-#     if species_name in stereo_dict:
-#         update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
-        
-#     else:
-#         name_mpcule_dict[species_name] = mpcule_id
-#         stereo_dict[species_name] = [species_name]
-
-# number_named = len(name_mpcule_dict)
-
-# total_num_names = len(name_mpcule_dict)
-# print(f"total number of species named: {total_num_names}")
-
-# assert number_named == number_to_name
