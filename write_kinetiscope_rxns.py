@@ -413,9 +413,9 @@ print('Associating functional groups with their Molecule objects...')
 func_group_dict = {}
 
 for filename in glob.glob('*.xyz'): #TODO consider adding more functional groups for the larger stereoisomers
-    func_group = Molecule.from_file(filename)  # Load functional group as a Molecule
-    func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False))
-    func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph)
+    func_group = Molecule.from_file(filename)  # Load functional group as a pymatgen Molecule
+    func_group_mol_graph = MoleculeGraph.with_local_env_strategy(func_group, OpenBabelNN(order=False)) #build pymatgen MoleculeGraph
+    func_group_undirected_graph = nx.Graph(func_group_mol_graph.graph) #convert graph to networkx undirected graph
     
     name = filename.replace('.xyz', '')
     func_group_dict[name] = func_group_undirected_graph
@@ -435,9 +435,9 @@ stereo_dict = {} #assocites a given base name with all of its stereoisomers
 for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
     species_name = generate_species_name(species_dict, func_group_dict)
     
-    # Check and update stereo_dict if necessary
     if species_name in stereo_dict:
         update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
+        
     else:
         name_mpcule_dict[species_name] = mpcule_id
         stereo_dict[species_name] = [species_name]
@@ -448,6 +448,7 @@ total_num_names = len(name_mpcule_dict)
 print(f"total number of species named: {total_num_names}")
 
 assert number_named == number_to_name
+
 # Finalize and output results
 # reactions_added = set()
 # reactions = []
