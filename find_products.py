@@ -41,16 +41,16 @@ for i, name in enumerate(name_list):
 formed_non_reactants = {name: info for name, info in name_info_dict.items() if float(info["initial_conc"]) == 0.0 and float(info["final_conc"] > 0.0)}
 sorted_products = sorted(formed_non_reactants.items(), key=lambda x: x[1]["final_conc"], reverse=True)
 
-top_12_products = [key for key, _ in sorted_products[:12]]
+top_10_products = [key for key, _ in sorted_products[:10]]
 name_index_dict = loadfn("name_index_key.json")
 
 index_list = []
 
-for product in top_12_products:
+for product in top_10_products:
     if name_index_dict.get(product, False):
         index = name_index_dict[product]
         index_list.append(index)
 
-print(f"list of names of top 10 products: {top_12_products}")
+print(f"list of names of top 10 products: {top_10_products}")
 print(f"list of indicies of top 10 products: {index_list}")
 print(f"total number of products with nonzero concentration: {len(sorted_products)}")
