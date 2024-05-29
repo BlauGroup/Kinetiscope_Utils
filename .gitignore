@@ -1,2 +1,8 @@
 ﻿Kinetiscope_rxn_class.py
 __pycache__
+analyze_rxn_network.py
+Create_rxn_dicts.py
+Kinetiscope_rxn_classes.py
+reaction_framework.py
+reaction_path_framework.py
+shortest_tree_analysis.py
