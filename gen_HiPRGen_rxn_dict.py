@@ -88,4 +88,20 @@ for rxn_dict in all_rxn_dicts:
     new_rxn.phase = 1 if new_rxn.reaction_hash in P1_rxn_hashes else 2
     HiPRGen_rxn_list.append(new_rxn)
 
-dumpfn(HiPRGen_rxn_list,"HiPRGen_rxns_to_name.json")
+# Initialize the dictionary to hold the reactions grouped by their tags
+tagged_rxn_dict = {}
+
+for reaction in HiPRGen_rxn_list:
+    
+    tag = reaction.tag
+    
+    if tag not in tagged_rxn_dict:
+        
+        tagged_rxn_dict[tag] = []
+    
+    tagged_rxn_dict[tag].append(reaction)
+ 
+
+# Now tagged_rxn_dict contains the grouped reactions by their tags
+
+dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
