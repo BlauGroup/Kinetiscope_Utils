@@ -72,6 +72,7 @@ class HiPRGen_Reaction(MSONable):
         self.products = [p for p in reaction_dict["products"] if p is not None]
         self.phase = phase
         self.reaction_hash = self.write_reaction_hash()
+        self.tag = tag
     
     def write_reaction_hash(self):
         sorted_reactant_mpculeids = sorted(self.reactants)
@@ -86,7 +87,8 @@ class HiPRGen_Reaction(MSONable):
             "reactants": self.reactants,
             "products": self.products,
             "phase": self.phase,
-            "reaction_hash": self.reaction_hash
+            "reaction_hash": self.reaction_hash,
+            "tag":self.tag
         }
 
     def __str__(self):
@@ -94,7 +96,8 @@ class HiPRGen_Reaction(MSONable):
             "reactants": self.reactants,
             "products": self.products,
             "phase": self.phase,
-            "reaction_hash": self.reaction_hash
+            "reaction_hash": self.reaction_hash,
+            "tag":self.tag
         })
     
     @classmethod
