@@ -9,25 +9,22 @@ import sys
 from monty.serialization import loadfn
 from Rxn_classes import HiPRGen_Reaction, Kinetiscope_Reaction
 
+def write_light_ionization():
+    pass
+
+def write_electron_ionization():
+    pass
+
+def write_electron_attachment():
+    pass
+
+def write_recombination():
+    pass
+
+def write_ionization_reactions():
+    pass
+
 def write_kinetiscope_name():
-    pass
-
-def is_H_rxn():
-    pass
-
-def is_ion_ion():
-    pass
-
-def is_aromatic_sub():
-    pass
-
-def is_ion_molecule():
-    pass
-
-def is_neutral_radical():
-    pass
-
-def tag_rxn():
     pass
 
 def attach_rate_constant():
