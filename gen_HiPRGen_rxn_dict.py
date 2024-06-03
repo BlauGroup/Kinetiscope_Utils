@@ -5,157 +5,78 @@ Created on Fri May 24 11:54:29 2024
 @author: JRMilton
 """
 import os
-import sys
 from monty.serialization import loadfn, dumpfn
 from Rxn_classes import HiPRGen_Reaction
-
-def find_charge(mpculeid):
-    """
-    This
-    function simply returns the charge of a given species as an interger based
-    on its mpculeid.
-
-    Parameters
-    ----------
-    mpculeid : string
-        a string of the form: "graph_hash-formula-charge-spin" 
-
-    Returns
-    -------
-    charge : int
-        charge of the species
-
-    """
-    charge_str = mpculeid.split("-")[2]
-    if "m" in charge_str: #m stands for minus in the string
-        charge = -int(charge_str.replace("m", ""))
-        
-    else:
-        charge = int(charge_str)
-    return charge
-
-def determine_ionization_type(reactant_charge, product_charge):
-    delta_charge = product_charge-reactant_charge
-    if delta_charge < 0:
-        # if reactant_charge :
-        return "electron_attachment"
-        # else:
-        #     return "charge_quenching"
-    else:
-        return "positive_ionization"
-    
-def is_ionization_reaction(reaction):
-    """
-    "Phase 1" of our EUV exposure model contains ionization reactions that
-    we want to tag later when we're building our Kinetiscope reaction objects.
-    This function tags these reactions.
-    
-
-    Parameters
-    ----------
-    reaction : HiPRGen_Reaction object
-        the reaction we're testing
-
-    Returns
-    -------
-    bool
-        True if reaction is ionization, False otherwise.
-
-    """
-    num_reactants = len(reaction.reactants)
-    num_products = len(reaction.products)
-    if num_reactants+num_products == 2:
-        reactant_mpculeid = reaction.reactants[0]
-        product_mpculeid = reaction.products[0]
-        reactant_charge = find_charge(reactant_mpculeid)
-        product_charge = find_charge(product_mpculeid)
-        if product_charge != reactant_charge: 
-            return determine_ionization_type(reactant_charge, product_charge)
-    return False
-
-def is_H_rxn():
-    pass
-
-def is_ion_ion():
-    pass
-
-def is_aromatic_sub():
-    pass
-
-def is_ion_molecule():
-    pass
-
-def is_neutral_radical():
-    pass
-
-def tag_rxn():
-    pass
-
-#tag P1 rxns
+from classify_ionization_reactions import (
+    process_ionization_reactions,
+    narrow_down_ionization_type
+)
+from classify_chemical_reactions import tag_chemical_reaction
 
 os.chdir("G:/My Drive/CRNs/041323_p1")
 P1_rxn_tally = loadfn("reaction_tally.json")
+all_P1_reactions = P1_rxn_tally["reactions"].values()
 P1_rxn_hashes = set()
-HiPRGen_rxn_list = []
+ionization_hashes = set()
+ionization_rxn_list = []
 
-for rxn_dict in P1_rxn_tally["reactions"].values():
+for rxn_dict in all_P1_reactions:
+    
     new_rxn = HiPRGen_Reaction(rxn_dict,phase=1)
-    if is_ionization_reaction(new_rxn):
-        new_rxn.tag = is_ionization_reaction(new_rxn)
-        HiPRGen_rxn_list.append(new_rxn)
-    P1_rxn_hashes.add(new_rxn.reaction_hash)
+    
+    #we didn't ask for TSs for ionzation rxns but need them in our simulations
+    #so we save them here
+    
+    ionization_rxn_list, ionization_hashes = \
+    process_ionization_reactions(new_rxn, ionization_rxn_list, ionization_hashes)
+    
+    P1_rxn_hashes.add(new_rxn.reaction_hash) #lets us test if other reactions 
+                                             #are in P1 or P2 later
 
-
+for reaction in ionization_rxn_list:
+    
+    if reaction.tag == "attachment_or_recombination":
+        
+        reaction.tag = narrow_down_ionization_type(reaction, ionization_rxn_list)
+            
 #read in HiPRGen rxns we want to write names for
 
 os.chdir("G:/My Drive/CRNs/Kinetiscope_rxn_naming052824")
-all_rxn_dicts = loadfn("euvl_TSreactions_041823.json")
+all_requested_reactions = loadfn("euvl_TSreactions_041823.json") #list of all 
+                                                                 #reactions we
+                                                                 #asked for TSs
 
+rxns_for_simulation = ionization_rxn_list
+rxns_already_added = ionization_hashes
 
-for rxn_dict in all_rxn_dicts:
+for rxn_dict in all_requested_reactions:
+    
     new_rxn = HiPRGen_Reaction(rxn_dict,tag="chemical")
+    new_rxn.tag = tag_chemical_reaction(new_rxn)
+    
     new_rxn.phase = 1 if new_rxn.reaction_hash in P1_rxn_hashes else 2
-    HiPRGen_rxn_list.append(new_rxn)
-
-modifications = []
-for reaction in HiPRGen_rxn_list:
-    if reaction.tag == "electron_attachment":
-        for index, rxn in enumerate(HiPRGen_rxn_list):
-            if rxn.tag == "positive_ionization":
-                if reaction.reactants == rxn.products and reaction.products == rxn.reactants:
-                    # Change the tag to recombination
-                    reaction.tag = "recombination"
-                    # Collect the modification
-                    modifications.append((index, {
-                        "positive_ionization": rxn,
-                        "recombination": reaction
-                    }))
-
-# Apply the modifications after iteration
-for index, new_value in modifications:
-    HiPRGen_rxn_list[index] = new_value
-# Initialize the dictionary to hold the reactions grouped by their tags
+    
+    if new_rxn.reaction_hash not in rxns_already_added:
+        
+        rxns_for_simulation.append(new_rxn)
+        rxns_already_added.add(new_rxn.reaction_hash)
+        
 tagged_rxn_dict = {}
 
-for reaction in HiPRGen_rxn_list:
-    
-    # if reaction.tag == "electron_attachment":
-    #     for index, rxn in enumerate(tagged_rxn_dict["ionization_and_recombination"]):
-    #         if reaction.reactants == rxn.products and reaction.products == rxn.reactants:
-    #             reaction.tag = "recombination"
-    #             tagged_rxn_dict["ionization_and_recombination"][index] = {
-    #                 "positive_ionization":rxn,
-    #                 "recombination":reaction}
+for reaction in rxns_for_simulation:
                 
     if reaction.tag not in tagged_rxn_dict:
         
         tagged_rxn_dict[reaction.tag] = []
     
     tagged_rxn_dict[reaction.tag].append(reaction)
- 
-# for reaction in tagged_rxn_dict["electron_attachment"]:
-#     for rxn in tagged_rxn_dict["positive_ionization"]:
-#         if reaction.reactants == rxn.products and reaction.products == rxn.reactants:
-#             reaction.tag = "recombination"
-
+    
 dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
+
+def print_dict_lengths(dictionary):
+    for key, value in dictionary.items():
+        value_length = len(value)
+        print(f"Key '{key}' has a value with length {value_length}")
+
+
+print_dict_lengths(tagged_rxn_dict)
