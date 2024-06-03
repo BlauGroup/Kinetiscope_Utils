@@ -74,10 +74,8 @@ class HiPRGen_Reaction(MSONable):
         self.reaction_hash = self.write_reaction_hash()
         self.tag = tag
     
-    def write_reaction_hash(self):
-        sorted_reactant_mpculeids = sorted(self.reactants)
-        sorted_product_mpculeids = sorted(self.products)
-        reaction_hash = ''.join(sorted_reactant_mpculeids) + ''.join(sorted_product_mpculeids)
+    def write_reaction_hash(self): #after testing these are unique
+        reaction_hash = ''.join(self.reactants) + "=>"  + ''.join(self.products)
         return reaction_hash
             
     def as_dict(self):
