@@ -9,6 +9,7 @@ import sys
 from monty.serialization import loadfn
 from Rxn_classes import HiPRGen_Reaction, Kinetiscope_Reaction
 
+#TODO account for 1st vs. second-order rate constants when using kT/h
 def write_light_ionization():
     pass
 
