@@ -5,7 +5,7 @@ Created on Fri May 24 11:54:29 2024
 @author: JRMilton
 """
 
-def find_charge(mpculeid):
+def find_mpculeid_charge(mpculeid):
     """
     This function simply returns the charge of a given species as an interger
     based on its mpculeid.
@@ -29,33 +29,14 @@ def find_charge(mpculeid):
         charge = int(charge_str)
     return charge
 
-def determine_broad_ionization_type(reactant_charge, product_charge):
-    """
-    Calculates the change in charge over the course of an ionization reaction
-    and determines if the ionization reaction is attachment, recomibnation,
-    or positive ionization
+def find_reactant_and_product_charges(reaction):
+    reactant_mpculeid = reaction.reactants[0]
+    product_mpculeid = reaction.products[0]
+    reactant_charge = find_mpculeid_charge(reactant_mpculeid)
+    product_charge = find_mpculeid_charge(product_mpculeid)
+    
+    return reactant_charge, product_charge
 
-    Parameters
-    ----------
-    reactant_charge : int
-        charge of the reactant species
-    product_charge : TYPE
-        charge of the product species
-
-    Returns
-    -------
-    str
-        a tag denoting, broadly, what type of ionziation reaction this is.
-        We will distinguish between attachment and recombination later.
-    """
-    delta_charge = product_charge-reactant_charge
-    
-    if delta_charge < 0:
-        return "attachment_or_recombination"
-    
-    else:
-        return "positive_ionization"
-    
 def reaction_is_ionization(reaction):
     """
     "Phase 1" of our EUV exposure model contains ionization reactions that
@@ -82,17 +63,48 @@ def reaction_is_ionization(reaction):
     
     if num_reactants+num_products == 2:
         
-        reactant_mpculeid = reaction.reactants[0]
-        product_mpculeid = reaction.products[0]
-        reactant_charge = find_charge(reactant_mpculeid)
-        product_charge = find_charge(product_mpculeid)
+        reactant_charge, product_charge = find_reactant_and_product_charges(reaction)
         
-        if product_charge != reactant_charge: 
-            return True, determine_broad_ionization_type(reactant_charge, product_charge)
+        if reactant_charge != product_charge: 
+            return True
         
-    return False, None
+    return False
 
-def process_ionization_reactions(new_rxn, ionization_rxn_list, ionization_hashes):
+def determine_broad_ionization_type(reaction):
+    """
+    Calculates the change in charge over the course of an ionization reaction
+    and determines if the ionization reaction is attachment, recomibnation,
+    or positive ionization
+
+    Parameters
+    ----------
+    reactant_charge : int
+        charge of the reactant species
+    product_charge : int
+        charge of the product species
+
+    Returns
+    -------
+    str
+        a tag denoting, broadly, what type of ionziation reaction this is.
+        We will distinguish between attachment and recombination later.
+    """
+    
+    reactant_charge, product_charge = find_reactant_and_product_charges(reaction)
+    delta_charge = product_charge-reactant_charge
+    
+    if delta_charge < 0:
+        
+        if reactant_charge > 0:
+            return "attachment_or_recombination"
+        
+        else:   
+            return "electron_attachment"
+    
+    else:
+        return "positive_ionization"
+
+def process_ionization_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
     """
     This function updates ionization_rxn_list and ionization_hashes by adding
     info for new_rxn if deemed necessary.
@@ -114,15 +126,14 @@ def process_ionization_reactions(new_rxn, ionization_rxn_list, ionization_hashes
         potentially updated set
     """
     
-    rxn_is_ionization, new_tag = reaction_is_ionization(new_rxn)
-    
-    if rxn_is_ionization: 
+    if new_rxn.reaction_hash not in rxns_already_added:
         
+        new_tag = determine_broad_ionization_type(new_rxn)  
         new_rxn.tag = new_tag
-        ionization_rxn_list.append(new_rxn)
-        ionization_hashes.add(new_rxn.reaction_hash)
+        rxns_for_simulation.append(new_rxn)
+        rxns_already_added.add(new_rxn.reaction_hash)
     
-    return ionization_rxn_list, ionization_hashes
+    return rxns_for_simulation, rxns_already_added
 
 def is_reversed_reaction(reaction, rxn):
     """
@@ -144,7 +155,7 @@ def is_reversed_reaction(reaction, rxn):
     
     return reaction.reactants == rxn.products and reaction.products == rxn.reactants
 
-def narrow_down_ionization_type(reaction, ionization_rxn_list):
+def narrow_down_ionization_type(reaction, rxns_for_simulation):
     """
     If in our list of reactions, there exists a positive_reaction that is the
     reverse of our tested reaction, it is a recombination reaction. Otherwise,
@@ -165,7 +176,7 @@ def narrow_down_ionization_type(reaction, ionization_rxn_list):
         otherwise.
     """
     
-    if any(is_reversed_reaction(reaction, rxn) for rxn in ionization_rxn_list): #TODO make this to strictly be true for ionization reactions
+    if any(is_reversed_reaction(reaction, rxn) for rxn in rxns_for_simulation):
         return "electron_cation_recombination"
     
     else:

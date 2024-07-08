@@ -317,3 +317,10 @@ def tag_chemical_reaction(rxn):
                 return classification
 
     return "misc_chemical"  # tag if no classification matched
+
+def process_chemical_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
+    
+    if new_rxn.reaction_hash not in rxns_already_added:
+        new_rxn.tag = tag_chemical_reaction(new_rxn)
+        rxns_for_simulation.append(new_rxn)
+        rxns_already_added.add(new_rxn.reaction_hash)
