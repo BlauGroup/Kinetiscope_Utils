@@ -152,6 +152,8 @@ for mpcule_id, species_dict in mpcule_id_molecule_dict.items():
         name_mpcule_dict[species_name] = mpcule_id
         stereo_dict[species_name] = [species_name]
 
+dumpfn(name_mpcule_dict, "name_mpculeid_association_060424.json")
+
 number_named = len(name_mpcule_dict)
 
 total_num_names = len(name_mpcule_dict)

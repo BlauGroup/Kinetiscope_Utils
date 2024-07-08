@@ -74,12 +74,9 @@ for reaction in rxns_for_simulation:
 dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
 def print_dict_lengths(dictionary):
-    total_length = 0
     for key, value in dictionary.items():
         value_length = len(value)
-        total_length += value_length
-        print(f"'{key}' {value_length}")
-    print(f"Sum total of the values' lengths: {total_length}")
+        print(f"Key '{key}' has a value with length {value_length}")
 
 
 print_dict_lengths(tagged_rxn_dict)

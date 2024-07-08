@@ -6,6 +6,7 @@ Created on Fri May 24 11:54:29 2024
 """
 import re
 from classify_ionization_reactions import find_charge
+from Rxn_classes import HiPRGen_Reaction
 
 def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
     """
@@ -269,7 +270,40 @@ def tag_chemical_reaction(rxn):
         The tag for the classified reaction
     """
     
-    if len(rxn.reactants) == 2: #TODO consider what to do about classifying other types of reactions--r-r recombination, fragmentation, etc. 
+    if len(rxn.reactants) == 2 and len(rxn.products) == 1: #combination reactions
+        
+        classifications = [
+            classify_ion_ion(rxn),
+            classify_ion_molecule(rxn),
+            classify_neutral_radical(rxn)
+         ]
+        
+        for classification in classifications:
+            if classification:
+                return classification + "_combination"
+            
+        return "misc_neutral_recombination"
+    
+    if len(rxn.reactants) == 1 and len(rxn.products) == 2: #fragmentation reactions
+        
+        reverse_reaction_dict = \
+            {"reactants":rxn.products, "products":rxn.reactants}
+            
+        reverse_reaction = HiPRGen_Reaction(reverse_reaction_dict)
+        
+        classifications = [
+            classify_ion_ion(reverse_reaction),
+            classify_ion_molecule(reverse_reaction),
+            classify_neutral_radical(reverse_reaction)
+          ]
+        
+        for classification in classifications:
+            if classification:
+                return classification + "_fragmentation"
+        
+        return "misc_fragmentation"
+    
+    if len(rxn.reactants) == 2: #2 reactant, 2 product reactions
         
         classifications = [
             classify_H(rxn),
@@ -282,4 +316,4 @@ def tag_chemical_reaction(rxn):
             if classification:
                 return classification
 
-    return "misc chemical"  # tag if no classification matched
+    return "misc_chemical"  # tag if no classification matched

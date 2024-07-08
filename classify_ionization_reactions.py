@@ -165,8 +165,8 @@ def narrow_down_ionization_type(reaction, ionization_rxn_list):
         otherwise.
     """
     
-    if any(is_reversed_reaction(reaction, rxn) for rxn in ionization_rxn_list):
-        return "recombination"
+    if any(is_reversed_reaction(reaction, rxn) for rxn in ionization_rxn_list): #TODO make this to strictly be true for ionization reactions
+        return "electron_cation_recombination"
     
     else:
         return "electron_attachment"
