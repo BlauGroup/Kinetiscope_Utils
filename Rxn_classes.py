@@ -68,8 +68,8 @@ from monty.json import MSONable
 #         return cls(**d)
 class HiPRGen_Reaction(MSONable):
     def __init__(self, reaction_dict, phase=None, tag=None):
-        self.reactants = [r for r in reaction_dict["reactants"] if r is not None]
-        self.products = [p for p in reaction_dict["products"] if p is not None]
+        self.reactants = [r for r in sorted(reaction_dict["reactants"]) if r is not None]
+        self.products = [p for p in sorted(reaction_dict["products"]) if p is not None]
         self.phase = phase
         self.reaction_hash = self.write_reaction_hash()
         self.tag = tag
