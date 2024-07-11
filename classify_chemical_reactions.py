@@ -5,7 +5,7 @@ Created on Fri May 24 11:54:29 2024
 @author: JRMilton
 """
 import re
-from classify_ionization_reactions import find_charge
+from reaction_classification_utilities import find_mpculeid_charge
 from Rxn_classes import HiPRGen_Reaction
 
 def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
@@ -29,24 +29,28 @@ def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
 
     """
     
-    reactant_charge = find_charge(reactant_gaining_H)
-    product_charge = find_charge(product_with_H)
+    reactant_charge = find_mpculeid_charge(reactant_gaining_H)
+    product_charge = find_mpculeid_charge(product_with_H)
     
     delta_charge = product_charge - reactant_charge
     
     if delta_charge == 1:
+        
         return "proton_transfer"
     
     elif delta_charge == -1:
+        
         return "hydride_abstraction"
     
     is_radical_reaction = \
         reactant_gaining_H.split("-")[3] != product_with_H.split("-")[3]
     
     if delta_charge == 0 and is_radical_reaction:
+        
         return "H_atom_abstraction"
     
     else:
+        
         return "proton_coupled_electron_transfer"
 
 def count_number_hydrogens(formula):
@@ -182,8 +186,8 @@ def classify_ion_ion(rxn):
     reactant_1 = rxn.reactants[0]
     reactant_2 = rxn.reactants[1]
     
-    reactant_1_charge = find_charge(reactant_1)
-    reactant_2_charge = find_charge(reactant_2)
+    reactant_1_charge = find_mpculeid_charge(reactant_1)
+    reactant_2_charge = find_mpculeid_charge(reactant_2)
 
     if reactant_1_charge == reactant_2_charge and reactant_1_charge == 0: #already filtered same charge ion reactions, this just removed
                                                                           #reactions where the charges are both 0
@@ -216,8 +220,8 @@ def classify_ion_molecule(rxn):
     reactant_1 = rxn.reactants[0]
     reactant_2 = rxn.reactants[1]
     
-    reactant_1_charge = find_charge(reactant_1)
-    reactant_2_charge = find_charge(reactant_2)
+    reactant_1_charge = find_mpculeid_charge(reactant_1)
+    reactant_2_charge = find_mpculeid_charge(reactant_2)
 
     if reactant_1_charge != reactant_2_charge:
         return "ion-molecule"
@@ -245,8 +249,8 @@ def classify_neutral_radical(rxn):
         spin = int(reactant_mpculeid.split('-')[3])
         if spin == 2:
             
-            reactant_1_charge = find_charge(rxn.reactants[0])
-            reactant_2_charge = find_charge(rxn.reactants[1])
+            reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
+            reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
             
             reactant_charges_are_zero = reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
             
@@ -255,7 +259,7 @@ def classify_neutral_radical(rxn):
                 
     return None
 
-def tag_chemical_reaction(rxn):
+def determine_chemical_reaction_tag(rxn):
     """
     Tags chemical reactions by calling classification functions in a specific order.
 
@@ -318,9 +322,12 @@ def tag_chemical_reaction(rxn):
 
     return "misc_chemical"  # tag if no classification matched
 
-def process_chemical_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
+# def process_chemical_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
     
-    if new_rxn.reaction_hash not in rxns_already_added:
-        new_rxn.tag = tag_chemical_reaction(new_rxn)
-        rxns_for_simulation.append(new_rxn)
-        rxns_already_added.add(new_rxn.reaction_hash)
+#     if new_rxn.reaction_hash not in rxns_already_added:
+        
+#         new_rxn.tag = determine_chemical_reaction_tag(new_rxn)
+#         rxns_for_simulation.append(new_rxn)
+#         rxns_already_added.add(new_rxn.reaction_hash)
+        
+#     return rxns_for_simulation, rxns_already_added

@@ -5,37 +5,8 @@ Created on Fri May 24 11:54:29 2024
 @author: JRMilton
 """
 
-def find_mpculeid_charge(mpculeid):
-    """
-    This function simply returns the charge of a given species as an interger
-    based on its mpculeid.
-
-    Parameters
-    ----------
-    mpculeid : string
-        a string of the form: "graph_hash-formula-charge-spin" 
-
-    Returns
-    -------
-    charge : int
-        charge of the species
-    """
-    
-    charge_str = mpculeid.split("-")[2]
-    if "m" in charge_str: #m stands for minus in the string
-        charge = -int(charge_str.replace("m", ""))
-        
-    else:
-        charge = int(charge_str)
-    return charge
-
-def find_reactant_and_product_charges(reaction):
-    reactant_mpculeid = reaction.reactants[0]
-    product_mpculeid = reaction.products[0]
-    reactant_charge = find_mpculeid_charge(reactant_mpculeid)
-    product_charge = find_mpculeid_charge(product_mpculeid)
-    
-    return reactant_charge, product_charge
+from reaction_classification_utilities import (
+    find_reactant_and_product_charges)
 
 def reaction_is_ionization(reaction):
     """
@@ -70,7 +41,7 @@ def reaction_is_ionization(reaction):
         
     return False
 
-def determine_broad_ionization_type(reaction):
+def determine_broad_ionization_tag(reaction):
     """
     Calculates the change in charge over the course of an ionization reaction
     and determines if the ionization reaction is attachment, recomibnation,
@@ -93,47 +64,47 @@ def determine_broad_ionization_type(reaction):
     reactant_charge, product_charge = find_reactant_and_product_charges(reaction)
     delta_charge = product_charge-reactant_charge
     
-    if delta_charge < 0:
+    if delta_charge < 0 and reactant_charge > 0:
         
-        if reactant_charge > 0:
-            return "attachment_or_recombination"
+        return "attachment_or_recombination"
+    
+    elif delta_charge < 0:
         
-        else:   
-            return "electron_attachment"
+        return "electron_attachment"
     
     else:
+        
         return "positive_ionization"
 
-def process_ionization_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
-    """
-    This function updates ionization_rxn_list and ionization_hashes by adding
-    info for new_rxn if deemed necessary.
+# def process_ionization_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
+#     """
+#     This function updates ionization_rxn_list and ionization_hashes by adding
+#     info for new_rxn if deemed necessary.
 
-    Parameters
-    ----------
-    new_rxn : HiPRGen rxn object
-        reaction we're classifying
-    ionization_rxn_list : list
-        list containing all HiPRGen rxns we've already made
-    ionization_hashes : set
-        set of hashes for ionization reactions we've already created
+#     Parameters
+#     ----------
+#     new_rxn : HiPRGen rxn object
+#         reaction we're classifying
+#     ionization_rxn_list : list
+#         list containing all HiPRGen rxns we've already made
+#     ionization_hashes : set
+#         set of hashes for ionization reactions we've already created
 
-    Returns
-    -------
-    ionization_rxn_list : list
-        potentially updated list
-    ionization_hashes : hash
-        potentially updated set
-    """
+#     Returns
+#     -------
+#     ionization_rxn_list : list
+#         potentially updated list
+#     ionization_hashes : hash
+#         potentially updated set
+#     """
     
-    if new_rxn.reaction_hash not in rxns_already_added:
+#     if new_rxn.reaction_hash not in rxns_already_added:
         
-        new_tag = determine_broad_ionization_type(new_rxn)  
-        new_rxn.tag = new_tag
-        rxns_for_simulation.append(new_rxn)
-        rxns_already_added.add(new_rxn.reaction_hash)
+#         new_rxn.tag = determine_broad_ionization_tag(new_rxn)  
+#         rxns_for_simulation.append(new_rxn)
+#         rxns_already_added.add(new_rxn.reaction_hash)
     
-    return rxns_for_simulation, rxns_already_added
+#     return rxns_for_simulation, rxns_already_added
 
 def is_reversed_reaction(reaction, rxn):
     """
@@ -177,7 +148,9 @@ def narrow_down_ionization_type(reaction, rxns_for_simulation):
     """
     
     if any(is_reversed_reaction(reaction, rxn) for rxn in rxns_for_simulation):
+        
         return "electron_cation_recombination"
     
     else:
+        
         return "electron_attachment"
