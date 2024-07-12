@@ -16,24 +16,54 @@ from classify_chemical_reactions import (
     determine_chemical_reaction_tag
 )
 from reaction_classification_utilities import add_reaction_if_new
-import time
-from monty.serialization import loadfn, dumpfn
-import copy
-import operator
-import pickle
-import sys
 
 def process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added):
+    """
+    Takes a reaction dictionary from phase 2, creates a HiPRGen reaction object
+    from it, checks to see if it's new, and if it is, adds it to the list of 
+    reactions for simulation and adds its hash to the set of added hashes.
+
+    Parameters
+    ----------
+    rxn_dict : dict
+        dictionary of the form: {"reactants":[mpculeids], "proudcts":[mpculeids]}
+    rxns_for_simulation : list
+        list of HiPRGen reaction objects we'll be simulating
+    rxns_already_added : set
+        reaction hashes for reactions already added
+
+    Returns
+    -------
+    tuple
+        tuple containing (potentially) modified rxns_for_simulation and 
+        rxns_already added with the new reaction added
+
+    """
     new_rxn = HiPRGen_Reaction(rxn_dict,phase=2)
     tag = determine_chemical_reaction_tag(new_rxn)
     return add_reaction_if_new(new_rxn, tag, rxns_for_simulation, rxns_already_added)
 
 def sort_pathways_list(pathways_list):
+    """
+    Takes the list of pathways, which are already sorted by weight, and then
+    sorts by frequency, meaning if two paths have the same weight their order
+    depends on their frequencies, with higher frequencies first
+
+    Parameters
+    ----------
+    pathways_list : list
+        unsorted list of pathways
+
+    Returns
+    -------
+    sorted_list : list
+        the list now sorted by weight and then frequency
+
+    """
     sorted_list = sorted(pathways_list, key=lambda x: (x['weight'], x['frequency']))
     return sorted_list
   
 # add all P1 reactions
-start=time.time()
 
 os.chdir("G:/My Drive/CRNs/041323_p1")
 P1_pathways_and_reactions = loadfn("reaction_tally.json") 
@@ -80,6 +110,9 @@ for rxn_index, rxn_dict in P2_index_rxn_dict.items():
         rxns_already_added, rxns_already_added = \
             process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
 
+#add reactions top 10 pathways forming network products if they weren't added
+#above
+
 network_products = loadfn("sink_report.json")
 
 for product_dict in network_products.values():
@@ -106,21 +139,21 @@ for product_dict in network_products.values():
             rxns_already_added, rxns_already_added = \
                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
-# tagged_rxn_dict = {}
+tagged_rxn_dict = {}
 
-# for reaction in rxns_for_simulation:
+for reaction in rxns_for_simulation:
                 
-#     if reaction.tag not in tagged_rxn_dict:
+    if reaction.tag not in tagged_rxn_dict:
         
-#         tagged_rxn_dict[reaction.tag] = []
+        tagged_rxn_dict[reaction.tag] = []
     
-#     tagged_rxn_dict[reaction.tag].append(reaction)
+    tagged_rxn_dict[reaction.tag].append(reaction)
     
-# dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
+dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
-# def print_dict_lengths(dictionary):
-#     for key, value in dictionary.items():
-#         value_length = len(value)
-#         print(f"Key '{key}' has a value with length {value_length}")
+def print_dict_lengths(dictionary):
+    for key, value in dictionary.items():
+        value_length = len(value)
+        print(f"Key '{key}' has a value with length {value_length}")
 
-# print_dict_lengths(tagged_rxn_dict)
+print_dict_lengths(tagged_rxn_dict)

@@ -76,36 +76,6 @@ def determine_broad_ionization_tag(reaction):
         
         return "positive_ionization"
 
-# def process_ionization_reactions(new_rxn, rxns_for_simulation, rxns_already_added):
-#     """
-#     This function updates ionization_rxn_list and ionization_hashes by adding
-#     info for new_rxn if deemed necessary.
-
-#     Parameters
-#     ----------
-#     new_rxn : HiPRGen rxn object
-#         reaction we're classifying
-#     ionization_rxn_list : list
-#         list containing all HiPRGen rxns we've already made
-#     ionization_hashes : set
-#         set of hashes for ionization reactions we've already created
-
-#     Returns
-#     -------
-#     ionization_rxn_list : list
-#         potentially updated list
-#     ionization_hashes : hash
-#         potentially updated set
-#     """
-    
-#     if new_rxn.reaction_hash not in rxns_already_added:
-        
-#         new_rxn.tag = determine_broad_ionization_tag(new_rxn)  
-#         rxns_for_simulation.append(new_rxn)
-#         rxns_already_added.add(new_rxn.reaction_hash)
-    
-#     return rxns_for_simulation, rxns_already_added
-
 def is_reversed_reaction(reaction, rxn):
     """
     If a given reaction is recombination, that means that it has a
