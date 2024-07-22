@@ -64,8 +64,8 @@ def sort_pathways_list(pathways_list):
     return sorted_list
   
 # add all P1 reactions
-
-os.chdir("G:/My Drive/CRNs/041323_p1")
+P1_directory = "G:/My Drive/CRNs/071924_test_p1"
+os.chdir(P1_directory)
 P1_pathways_and_reactions = loadfn("reaction_tally.json") 
 P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
 rxns_already_added = set()
@@ -95,7 +95,8 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
  
 #add all P2 reactions that fired >= 500 times
 
-os.chdir("G:/My Drive/CRNs/041423_p2")  
+P2_directory = "G:/My Drive/CRNs/071924_test_p2"
+os.chdir(P2_directory)  
 
 P2_pathways_and_reactions = loadfn("reaction_tally.json")
 P2_index_frequency_dict =  P2_pathways_and_reactions["pathways"]
@@ -139,21 +140,29 @@ for product_dict in network_products.values():
             rxns_already_added, rxns_already_added = \
                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
-tagged_rxn_dict = {}
+tagged_rxn_dict = {"ionization":{}, "chemical":{}}
+added_tags = set()
+ionization_classifications = set(["positive_ionization", "electron_attachment",
+                                  "electron_cation_recombination"])
 
 for reaction in rxns_for_simulation:
-                
-    if reaction.tag not in tagged_rxn_dict:
-        
-        tagged_rxn_dict[reaction.tag] = []
     
-    tagged_rxn_dict[reaction.tag].append(reaction)
+       superclass = \
+           "ionization" if reaction.tag in ionization_classifications else "chemical"
+
+       if reaction.tag not in tagged_rxn_dict[superclass]:
+           
+           tagged_rxn_dict[superclass][reaction.tag] = []
+
+       tagged_rxn_dict[superclass][reaction.tag].append(reaction)
     
 dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
 def print_dict_lengths(dictionary):
-    for key, value in dictionary.items():
-        value_length = len(value)
-        print(f"Key '{key}' has a value with length {value_length}")
+    for superclass, tags_dict in dictionary.items():
+        print(f"Superclass '{superclass}':")
+        for tag, reactions in tags_dict.items():
+            value_length = len(reactions)
+            print(f"  Tag '{tag}' has {value_length} reactions")
 
 print_dict_lengths(tagged_rxn_dict)
