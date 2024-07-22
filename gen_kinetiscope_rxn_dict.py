@@ -16,13 +16,22 @@ def write_light_ionization():
 def write_electron_ionization():
     pass
 
+def write_positive_ionization_reactions():
+    pass
+
 def write_electron_attachment():
     pass
 
 def write_recombination():
     pass
 
-def write_ionization_reactions():
+def handle_ionization_reactions():
+    pass
+
+def determine_order():
+    pass
+
+def handle_chemical_reactions():
     pass
 
 def write_kinetiscope_name():
