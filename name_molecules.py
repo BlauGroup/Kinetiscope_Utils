@@ -81,6 +81,7 @@ def validate_species_to_name(species_dict):
     species_pymatgen_mol = species_dict.get("molecule", False)
     
     if not species_dict or not species_pymatgen_mol:
+        
         raise KeyError("Missing required keys 'nx_graph' or 'molecule' in species_to_name.")
     
     species_graph = build_species_graph(graph_data)
@@ -141,13 +142,19 @@ def update_species_name(species_name, func_group_name, func_name_already_added):
     """
     
     if func_name_already_added:
+        
         if species_name[-2].isnumeric():
+            
             current_number_present = int(species_name[-2])
             new_number = current_number_present + 1
             species_name = species_name[:-2] + str(new_number)
+            
         else:
+            
             species_name = species_name[:-1] + str(2)  
+            
     else:
+        
         species_name += func_group_name 
         
     species_name = species_name + "_"
@@ -176,7 +183,9 @@ def update_remaining_species_graph(remaining_species_graph, func_group_mappings)
     """
     
     to_remove = func_group_mappings[0].keys() #we only care about one possible mapping b/c we remove iteratively
+    
     for atom_index in to_remove:
+        
         remaining_species_graph.remove_node(atom_index)
     
     return remaining_species_graph
@@ -239,10 +248,15 @@ def add_composition(species_name, remaining_species_graph):
     atom_composition = {}
     
     for node in remaining_species_graph.nodes(data=True):
+        
         element = node[1]['specie']
+        
         if element in atom_composition:
+            
             atom_composition[element] += 1
+            
         else:
+            
             atom_composition[element] = 1
 
     for element, count in atom_composition.items():
@@ -300,16 +314,23 @@ def generate_species_name(species_dict, func_group_dict):
     species_name = ""
 
     for func_group_name, func_group_graph in func_group_dict.items():
-        func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+        
+        func_group_is_present, func_group_mappings = \
+            functional_group_present(remaining_species_graph, func_group_graph)
         
         while func_group_is_present:
-            species_name, remaining_species_graph = update_name_and_graph(species_name, func_group_name, remaining_species_graph, func_group_mappings)
-            func_group_is_present, func_group_mappings = functional_group_present(remaining_species_graph, func_group_graph)
+            
+            species_name, remaining_species_graph = \
+                update_name_and_graph(species_name, func_group_name, remaining_species_graph, func_group_mappings)
+            
+            func_group_is_present, func_group_mappings = \
+                functional_group_present(remaining_species_graph, func_group_graph)
     
     if remaining_species_graph: #i.e. not all atoms are accounted for in the name
+    
         species_name = add_composition(species_name, remaining_species_graph)
         
-    species_charge = species_pymatgen_mol.charge #add charge to the name
+    species_charge = species_pymatgen_mol.charge
     species_name = add_charge(species_name, species_charge)
     
     return species_name
@@ -340,12 +361,16 @@ def name_stereoisomers(stereoisomer_list, name):
     """
     
     new_stereos_list = []
+    
     if len(stereoisomer_list) == 1: #i.e. only one other species with this name
+    
         name_1 = name + '_#1'
         name_2 = name + '_#2'
         new_stereos_list.append(name_1)
         new_stereos_list.append(name_2)
+        
     else:
+        
         current_max_num = len(stereoisomer_list)
         new_max_num_str = str(current_max_num + 1)
         new_isomer = name + "_#" + new_max_num_str
@@ -377,12 +402,14 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
 
     """
     
-    current_stereos = stereo_dict.get(test_name) 
-    new_stereos = name_stereoisomers(current_stereos, test_name) 
+    current_stereos = stereo_dict.get(test_name)
+    new_stereos = name_stereoisomers(current_stereos, test_name)
     stereo_dict[test_name] = new_stereos 
     
     old_mpculeid = name_mpcule_dict.get(test_name, False)
+    
     if old_mpculeid: 
+        
         name_mpcule_dict[new_stereos[-2]] =  old_mpculeid #we assign this one just so the following line is valid regardless of whether or not this test fired
         name_mpcule_dict.pop(test_name)
         
