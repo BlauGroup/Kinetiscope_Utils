@@ -21,7 +21,7 @@ def process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added):
     """
     Takes a reaction dictionary from phase 2, creates a HiPRGen reaction object
     from it, checks to see if it's new, and if it is, adds it to the list of 
-    reactions for simulation and adds its hash to the set of added hashes.
+    reactions for simulation and adds its name to the set of added names
 
     Parameters
     ----------
@@ -30,7 +30,7 @@ def process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added):
     rxns_for_simulation : list
         list of HiPRGen reaction objects we'll be simulating
     rxns_already_added : set
-        reaction hashes for reactions already added
+        names for reactions already added
 
     Returns
     -------
@@ -147,22 +147,25 @@ ionization_classifications = set(["positive_ionization", "electron_attachment",
 
 for reaction in rxns_for_simulation:
     
-       superclass = \
-           "ionization" if reaction.tag in ionization_classifications else "chemical"
+    superclass = \
+        "ionization" if reaction.tag in ionization_classifications else "chemical"
 
-       if reaction.tag not in tagged_rxn_dict[superclass]:
-           
-           tagged_rxn_dict[superclass][reaction.tag] = []
+    if reaction.tag not in tagged_rxn_dict[superclass]:
+        
+        tagged_rxn_dict[superclass][reaction.tag] = []
 
-       tagged_rxn_dict[superclass][reaction.tag].append(reaction)
+    tagged_rxn_dict[superclass][reaction.tag].append(reaction)
     
 dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
 def print_dict_lengths(dictionary):
+    total_number_rxns = 0
     for superclass, tags_dict in dictionary.items():
         print(f"Superclass '{superclass}':")
         for tag, reactions in tags_dict.items():
             value_length = len(reactions)
+            total_number_rxns += value_length
             print(f"  Tag '{tag}' has {value_length} reactions")
+    print(f"total number of reactions in test set: {total_number_rxns}")
 
 print_dict_lengths(tagged_rxn_dict)

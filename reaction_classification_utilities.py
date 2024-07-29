@@ -105,21 +105,21 @@ def add_reaction_if_new(new_rxn, tag, rxns_for_simulation, rxns_already_added):
     rxns_for_simulation : list
         list of reactions we'll be simulating
     rxns_already_added : set
-        set of reaction hashes for reactions in rxns_for_simulation
+        set of reaction names for reactions already added
 
     Returns
     -------
     rxns_for_simulation : list
         modified if new_rxn was added, unmodified otherwise
-    rxns_already_added : TYPE
+    rxns_already_added : set
         modified if new_rxn was added, unmodified otherwise
 
     """
     
-    if new_rxn.reaction_hash not in rxns_already_added:
+    if new_rxn.name not in rxns_already_added:
         
         new_rxn.tag = tag
         rxns_for_simulation.append(new_rxn)
-        rxns_already_added.add(new_rxn.reaction_hash)
+        rxns_already_added.add(new_rxn.name)
         
     return rxns_for_simulation, rxns_already_added

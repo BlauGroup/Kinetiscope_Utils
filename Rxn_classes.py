@@ -14,12 +14,18 @@ class HiPRGen_Reaction(MSONable):
         self.reactants = sorted([r for r in reaction_dict["reactants"] if r is not None])
         self.products = sorted([p for p in reaction_dict["products"] if p is not None])
         self.phase = phase
-        self.reaction_hash = self.write_reaction_hash()
+        # self.reaction_hash = self.write_reaction_hash()
         self.tag = tag
+        self.name = self.generate_reaction_string()
+
+    def generate_reaction_string(self):
+        reactants_str = " + ".join(self.reactants)
+        products_str = " + ".join(self.products)
+        return f"{reactants_str} => {products_str}"
     
-    def write_reaction_hash(self): #after testing these are unique
-        reaction_hash = ''.join(self.reactants) + "=>"  + ''.join(self.products)
-        return reaction_hash
+    # def write_reaction_hash(self): #after testing these are unique
+    #     reaction_hash = ''.join(self.reactants) + "=>"  + ''.join(self.products)
+    #     return reaction_hash
             
     def as_dict(self):
         return {
@@ -28,18 +34,13 @@ class HiPRGen_Reaction(MSONable):
             "reactants": self.reactants,
             "products": self.products,
             "phase": self.phase,
-            "reaction_hash": self.reaction_hash,
-            "tag":self.tag
+            # "reaction_hash": self.reaction_hash,
+            "tag": self.tag,
+            "name": self.name
         }
 
     def __str__(self):
-        return str({
-            "reactants": self.reactants,
-            "products": self.products,
-            "phase": self.phase,
-            "reaction_hash": self.reaction_hash,
-            "tag":self.tag
-        })
+        return self.name
     
     @classmethod
     def from_dict(cls, d):
