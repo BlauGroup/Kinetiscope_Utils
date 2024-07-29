@@ -62,6 +62,28 @@ def sort_pathways_list(pathways_list):
     """
     sorted_list = sorted(pathways_list, key=lambda x: (x['weight'], x['frequency']))
     return sorted_list
+
+def add_high_frequency_P2_reactions(directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500):
+    
+    try:
+        os.chdir(directory)  
+
+        data = loadfn("reaction_tally.json")
+        index_frequency_dict = data.get("pathways", {})
+        index_rxn_dict = data.get("reactions", {})
+
+        for rxn_index, rxn_dict in index_rxn_dict.items():
+            rxn_frequency = index_frequency_dict.get(rxn_index, 0)
+            
+            if rxn_frequency >= frequency_threshold:
+                rxns_for_simulation, rxns_already_added = process_P2_reaction(
+                    rxn_dict, rxns_for_simulation, rxns_already_added
+                )
+
+    except FileNotFoundError:
+        print(f"Error: The directory {directory} or the file 'reaction_tally.json' does not exist.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
   
 # add all P1 reactions
 P1_directory = "G:/My Drive/CRNs/071924_test_p1"
@@ -83,7 +105,7 @@ for rxn_dict in P1_rxn_dicts:
         
         tag = determine_chemical_reaction_tag(new_rxn)
         
-    rxns_already_added, rxns_already_added = \
+    rxns_for_simulation, rxns_already_added = \
         add_reaction_if_new(new_rxn, tag, rxns_for_simulation, rxns_already_added)
         
 for reaction in rxns_for_simulation: #can narrow down here when we have all
@@ -96,20 +118,22 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
 #add all P2 reactions that fired >= 500 times
 
 P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-os.chdir(P2_directory)  
+# os.chdir(P2_directory)  
 
-P2_pathways_and_reactions = loadfn("reaction_tally.json")
-P2_index_frequency_dict =  P2_pathways_and_reactions["pathways"]
-P2_index_rxn_dict = P2_pathways_and_reactions["reactions"]
+# P2_pathways_and_reactions = loadfn("reaction_tally.json")
+# P2_index_frequency_dict =  P2_pathways_and_reactions["pathways"]
+# P2_index_rxn_dict = P2_pathways_and_reactions["reactions"]
 
-for rxn_index, rxn_dict in P2_index_rxn_dict.items():
+add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
+
+# for rxn_index, rxn_dict in P2_index_rxn_dict.items():
     
-    rxn_frequency = P2_index_frequency_dict.get(rxn_index, None)
+#     rxn_frequency = P2_index_frequency_dict.get(rxn_index, None)
     
-    if rxn_frequency >= 500:
+#     if rxn_frequency >= 500:
         
-        rxns_already_added, rxns_already_added = \
-            process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
+#         rxns_for_simulation, rxns_already_added = \
+#             process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
 
 #add reactions top 10 pathways forming network products if they weren't added
 #above
@@ -137,7 +161,7 @@ for product_dict in network_products.values():
     for pathway in to_save_pathways:
         for reaction in pathway:
             rxn_dict = all_reactions.get(str(reaction), None)
-            rxns_already_added, rxns_already_added = \
+            rxns_for_simulation, rxns_already_added = \
                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
 tagged_rxn_dict = {"ionization":{}, "chemical":{}}
