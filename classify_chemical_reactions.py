@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 """
 Created on Fri May 24 11:54:29 2024
 
@@ -11,6 +11,8 @@ find_mpculeid_formula,
 find_mpculeid_spin
 )
 from Rxn_classes import HiPRGen_Reaction
+import sys
+import copy
 
 def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
     """
@@ -171,6 +173,55 @@ def classify_H(rxn):
                 
     return None
 
+def generate_formula_charge_dict(mpculeid):
+    formula = find_mpculeid_formula(mpculeid)
+    charge = find_mpculeid_charge(mpculeid)
+    return {"formula":formula, "charge":charge}
+
+def generate_mpculeid_formula_charge_dict(rxn):
+    mpculeid_formula_charge_dict = {"reactants":{}, "products":{}}
+    
+    for reactant_mpculeid in rxn.reactants:
+        mpculeid_formula_charge_dict["reactants"][reactant_mpculeid] = \
+            generate_formula_charge_dict(reactant_mpculeid)
+            
+    for product_mpculeid in rxn.products:
+        mpculeid_formula_charge_dict["products"][product_mpculeid] = \
+            generate_formula_charge_dict(product_mpculeid)
+    
+    return mpculeid_formula_charge_dict
+
+def get_sorted_formulas(mpculeid_formula_charge_dict, category):
+    """
+    Extracts and sorts formulas from the specified category (reactants or products)
+    of the mpculeid_formula_charge_dict.
+    """
+    formulas = [entry["formula"] for entry in mpculeid_formula_charge_dict[category].values()]
+    formulas.sort()
+    return formulas
+
+def charges_differ_by_one(reactant_charge, product_charge):
+    """
+    Checks if the charges of the reactant and product differ by one.
+    """
+    return abs(reactant_charge - product_charge) == 1
+
+def is_matching_formula(reactant_formula, product_formula):
+    """
+    Checks if the reactant and product formulas match.
+    """
+    return reactant_formula == product_formula
+
+def find_matching_product(reactant, products):
+    """
+    Finds a product with a matching formula and a charge differing by one.
+    """
+    for product_mpculeid, product_info in products.items():
+        if is_matching_formula(reactant["formula"], product_info["formula"]) and \
+           charges_differ_by_one(reactant["charge"], product_info["charge"]):
+            return product_mpculeid
+    return None
+
 def reaction_is_electron_transfer(rxn):
     """
     Electron transfer reactions are those where the charges of the reactants
@@ -180,41 +231,55 @@ def reaction_is_electron_transfer(rxn):
     Parameters
     ----------
     rxn : HiPRGen reaction object
-        the reaction we're testing to see if it is electron transfer
+        The reaction we're testing to see if it is electron transfer
 
     Returns
     -------
     bool
-        True of the reaction is electron transfer, False otherwise
+        True if the reaction is electron transfer, False otherwise
     """
+    mpculeid_formula_charge_dict = generate_mpculeid_formula_charge_dict(rxn)
     
-    reactant_formulas = []
-    product_formulas = []
-    product_charges = []
+    sorted_reactant_formulas = get_sorted_formulas(mpculeid_formula_charge_dict, "reactants")
+    sorted_product_formulas = get_sorted_formulas(mpculeid_formula_charge_dict, "products")
     
-    for reactant_mpculeid in rxn.reactants:
-        
-        reactant_formula = find_mpculeid_formula(reactant_mpculeid)
-        reactant_formulas.append(reactant_formula)
+    if sorted_reactant_formulas != sorted_product_formulas:
+        return False
     
-    reactant_formulas.sort()
-        
-    for product_mpculeid in rxn.products:
-        
-        product_formula = find_mpculeid_formula(product_mpculeid)
-        product_formulas.append(product_formula)
-        product_charge = find_mpculeid_charge(product_mpculeid)
-        product_charges.append(product_charge)
-        
-    product_formulas.sort()
-    product_charges_are_opposite = sum(product_charges) == 0
+    test_dict = copy.deepcopy(mpculeid_formula_charge_dict)
+    num_matches = 0
     
-    if reactant_formulas == product_formulas and product_charges_are_opposite:
-        return True
+    for reactant_mpculeid, reactant_info in test_dict["reactants"].items():
+        matching_product_mpculeid = find_matching_product(reactant_info, test_dict["products"])
+        if matching_product_mpculeid:
+            num_matches += 1
+            test_dict["products"].pop(matching_product_mpculeid)
     
-    return False
+    return num_matches == 2
+
+def classify_microcategory(rxn, supercateogry, subcategory):
+    return classify_H(rxn), reaction_is_electron_transfer(rxn)
     
-def classify_ion_ion(rxn):
+    return reaction_is_electron_transfer(rxn)
+def find_reactant_charges(rxn):
+    reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
+    reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
+    
+    return reactant_1_charge, reactant_2_charge
+
+def reaction_is_neutral(rxn):
+    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn) 
+       
+    return reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
+
+def reaction_is_ion_molecule(rxn):
+    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn)
+    charges_are_different = reactant_1_charge != reactant_2_charge
+    one_charge_zero = reactant_1_charge == 0 or reactant_2_charge == 0
+    
+    return charges_are_different and one_charge_zero
+    
+def classify_subcategory(rxn, supercategory):
     """
     For reactions with two reactants, determines if the reactions are
     oppositely charged. If they are, returns the ion-ion classification.
@@ -231,26 +296,47 @@ def classify_ion_ion(rxn):
 
     """
     
-    reactant_1 = rxn.reactants[0]
-    reactant_2 = rxn.reactants[1]
+    if reaction_is_neutral(rxn):
+        subcategory = "neutral"
     
-    reactant_1_charge = find_mpculeid_charge(reactant_1)
-    reactant_2_charge = find_mpculeid_charge(reactant_2)
-
-    if reactant_1_charge == reactant_2_charge and reactant_1_charge == 0: #already filtered same charge ion reactions, this just removed
-                                                                          #reactions where the charges are both 0
-        return None
-
-    charges_are_opposites = -reactant_1_charge == reactant_2_charge
-    
-    if charges_are_opposites:
+    elif reaction_is_ion_molecule(rxn):
+        subcategory = "ion-molecule"
         
-        if len(rxn.products) == 2:
-            if reaction_is_electron_transfer(rxn):
-                return "electron transfer"
-        return "ion-ion"
+    else:
+        subcategory = "ion-ion"
+        
+    if supercategory != "bimolecular":
+        return subcategory
     
-    return None
+    if classify_microcategory(rxn, subcategory):
+        return classify_microcategory(rxn, subcategory)
+    
+    return supercategory
+    
+    # # if reaction_is_electron_transfer(rxn):
+    # return classify_microcategory(rxn, "ion-ion")
+    #     return "electron transfer"
+    
+    # return "ion-ion"
+    # reactant_1 = rxn.reactants[0]
+    # reactant_2 = rxn.reactants[1]
+    
+    # reactant_1_charge = find_mpculeid_charge(reactant_1)
+    # reactant_2_charge = find_mpculeid_charge(reactant_2)
+
+    # if reactant_1_charge == reactant_2_charge and reactant_1_charge == 0: #already filtered same charge ion reactions, this just removed
+    #                                                                       #reactions where the charges are both 0
+    #     return None
+
+    # charges_are_opposites = -reactant_1_charge == reactant_2_charge
+    
+    # if charges_are_opposites:
+        
+    #     if len(rxn.products) == 2:
+            
+    #     return "ion-ion"
+    
+    # return None
 
 def classify_ion_molecule(rxn):
     """
@@ -296,24 +382,29 @@ def classify_neutral_radical(rxn):
         "neutral radical" if the reaction is neutral radical, None otherwise.
 
     """
-
+    if not reaction_is_neutral(rxn):
+        print(rxn)
+        
+        return None
+    
+    'fired'
     for reactant_mpculeid in rxn.reactants:
         
-        spin = int(reactant_mpculeid.split('-')[3])
+        spin = find_mpculeid_spin(reactant_mpculeid)
         
         if spin == 2:
             
-            reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
-            reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
+            # reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
+            # reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
             
-            reactant_charges_are_zero = \
-                reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
+            # reactant_charges_are_zero = \
+            #     reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
             
-            if reactant_charges_are_zero:
+            # if reactant_charges_are_zero:
                 
-                return "neutral_radical"
+            return "neutral_radical"
                 
-    return None
+    return "neutral"
 
 def handle_combination_reactions(rxn):
     """
@@ -342,7 +433,7 @@ def handle_combination_reactions(rxn):
         if classification:
             return classification + "_combination"
         
-    return "misc_neutral_recombination"
+    return "neutral_recombination"
 
 def handle_fragmentation_reactions(rxn):
     """
