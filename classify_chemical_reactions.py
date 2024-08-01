@@ -553,6 +553,7 @@ def determine_charge_name(mpculeid):
 def determine_species_subclass(mpculeid):
     charge_name = determine_charge_name(mpculeid)
     spin = find_mpculeid_spin(mpculeid)
+    print(type(spin))
     
     if spin == 2 and charge_name == "neutral":
         
@@ -598,16 +599,24 @@ def handle_bimolecular_reactions(rxn):
     if len(rxn.products) == 1:
         return bimolecular_subclass + "_combination"
     
-    electron_transfer_name = reaction_is_electron_transfer(rxn)
     H_name = classify_H(rxn)
     
-    bimolecular_biproduct_name = bimolecular_subclass
+    if H_name:
+        return bimolecular_subclass + "_" + H_name
+    
+    electron_transfer_name = reaction_is_electron_transfer(rxn)
+    
+    if electron_transfer_name:
+        return bimolecular_subclass + "_" + electron_transfer_name
+    
+    return bimolecular_subclass + "_reaction"
+    
         
-    if electron_transfer_name or H_name:
-        bimolecular_biproduct_name += "_" + electron_transfer_name + H_name
-    # bimolecular_biproduct_name = \
-    #     bimolecular_subclass + electron_transfer_name + H_name
-    return bimolecular_biproduct_name
+    # # if electron_transfer_name or H_name:
+    # #     bimolecular_biproduct_name += "_" + electron_transfer_name + H_name
+    # # bimolecular_biproduct_name = \
+    # #     bimolecular_subclass + electron_transfer_name + H_name
+    # return bimolecular_biproduct_name
 
 def determine_chemical_reaction_tag(rxn):
     """
