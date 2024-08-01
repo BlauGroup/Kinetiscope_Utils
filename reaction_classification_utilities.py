@@ -39,11 +39,15 @@ def find_mpculeid_charge(mpculeid):
     """
     
     charge_str = mpculeid.split("-")[2]
+    
     if "m" in charge_str: #m stands for minus in the string
+    
         charge = -int(charge_str.replace("m", ""))
         
     else:
+        
         charge = int(charge_str)
+        
     return charge
 
 def find_mpculeid_spin(mpculeid):
@@ -61,7 +65,7 @@ def find_mpculeid_spin(mpculeid):
         spin associated with this mpculeid
     """
     
-    return mpculeid.split("-")[3]
+    return int(mpculeid.split("-")[3])
 
 def find_reactant_and_product_charges(reaction):
     """
