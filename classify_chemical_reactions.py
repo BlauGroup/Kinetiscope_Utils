@@ -171,7 +171,7 @@ def classify_H(rxn):
             if product_formula == reactant_with_one_more_hydrogen:
                 return narrow_H_rxn_type(reactant_mpculeid, product_mpculeid)
                 
-    return None
+    return ""
 
 def generate_formula_charge_dict(mpculeid):
     formula = find_mpculeid_formula(mpculeid)
@@ -244,7 +244,7 @@ def reaction_is_electron_transfer(rxn):
     sorted_product_formulas = get_sorted_formulas(mpculeid_formula_charge_dict, "products")
     
     if sorted_reactant_formulas != sorted_product_formulas:
-        return False
+        return ""
     
     test_dict = copy.deepcopy(mpculeid_formula_charge_dict)
     num_matches = 0
@@ -255,63 +255,66 @@ def reaction_is_electron_transfer(rxn):
             num_matches += 1
             test_dict["products"].pop(matching_product_mpculeid)
     
-    return num_matches == 2
-
-def classify_microcategory(rxn, supercateogry, subcategory):
-    return classify_H(rxn), reaction_is_electron_transfer(rxn)
+    if num_matches == 2:
+        return "electron_transfer"
     
-    return reaction_is_electron_transfer(rxn)
-def find_reactant_charges(rxn):
-    reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
-    reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
-    
-    return reactant_1_charge, reactant_2_charge
+    return ""
 
-def reaction_is_neutral(rxn):
-    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn) 
+# def classify_microcategory(rxn, supercateogry, subcategory):
+#     return classify_H(rxn), reaction_is_electron_transfer(rxn)
+    
+#     return reaction_is_electron_transfer(rxn)
+# def find_reactant_charges(rxn):
+#     reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
+#     reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
+    
+#     return reactant_1_charge, reactant_2_charge
+
+# def reaction_is_neutral(rxn):
+#     reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn) 
        
-    return reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
+#     return reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
 
-def reaction_is_ion_molecule(rxn):
-    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn)
-    charges_are_different = reactant_1_charge != reactant_2_charge
-    one_charge_zero = reactant_1_charge == 0 or reactant_2_charge == 0
+# def reaction_is_ion_molecule(rxn):
+#     reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn)
+#     charges_are_different = reactant_1_charge != reactant_2_charge
+#     one_charge_zero = reactant_1_charge == 0 or reactant_2_charge == 0
     
-    return charges_are_different and one_charge_zero
+#     return charges_are_different and one_charge_zero
     
-def classify_subcategory(rxn, supercategory):
-    """
-    For reactions with two reactants, determines if the reactions are
-    oppositely charged. If they are, returns the ion-ion classification.
+# def classify_subcategory(rxn, supercategory):
+#     """
+#     For reactions with two reactants, determines if the reactions are
+#     oppositely charged. If they are, returns the ion-ion classification.
 
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        the reaction being tested
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         the reaction being tested
 
-    Returns
-    -------
-    str
-        "ion-ion" if reaction is ion-ion, None otherwise
+#     Returns
+#     -------
+#     str
+#         "ion-ion" if reaction is ion-ion, None otherwise
 
-    """
+#     """
     
-    if reaction_is_neutral(rxn):
-        subcategory = "neutral"
+#     if reaction_is_neutral(rxn):
+#         subcategory = "neutral"
     
-    elif reaction_is_ion_molecule(rxn):
-        subcategory = "ion-molecule"
+#     elif reaction_is_ion_molecule(rxn):
+#         subcategory = "ion-molecule"
         
-    else:
-        subcategory = "ion-ion"
+#     else:
+#         subcategory = "ion-ion"
         
-    if supercategory != "bimolecular":
-        return subcategory
+#     if supercategory != "bimolecular":
+#         return subcategory
     
-    if classify_microcategory(rxn, subcategory):
-        return classify_microcategory(rxn, subcategory)
+#     if classify_microcategory(rxn, subcategory):
+#         return classify_microcategory(rxn, subcategory)
     
-    return supercategory
+#     return supercategory
     
     # # if reaction_is_electron_transfer(rxn):
     # return classify_microcategory(rxn, "ion-ion")
@@ -338,201 +341,274 @@ def classify_subcategory(rxn, supercategory):
     
     # return None
 
-def classify_ion_molecule(rxn):
-    """
-    Classifies a reaction as "ion-molecule" if, quite simply, one reactant
-    is charged and the other isn't.
+# def classify_ion_molecule(rxn):
+#     """
+#     Classifies a reaction as "ion-molecule" if, quite simply, one reactant
+#     is charged and the other isn't.
 
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
 
-    Returns
-    -------
-    str
-        "ion-molecule" if reaction is ion-molecule, None otherwise
+#     Returns
+#     -------
+#     str
+#         "ion-molecule" if reaction is ion-molecule, None otherwise
 
-    """
+#     """
     
+#     reactant_1 = rxn.reactants[0]
+#     reactant_2 = rxn.reactants[1]
+    
+#     reactant_1_charge = find_mpculeid_charge(reactant_1)
+#     reactant_2_charge = find_mpculeid_charge(reactant_2)
+
+#     if reactant_1_charge != reactant_2_charge:
+#         return "ion-molecule"
+   
+#     return None
+
+# def classify_neutral_radical(rxn):
+#     """
+#     Classifies a reaction as "neutral radical" if both reactants have charges
+#     of zero and one of the reactants has a spin of 2.
+
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
+
+#     Returns
+#     -------
+#     str
+#         "neutral radical" if the reaction is neutral radical, None otherwise.
+
+#     """
+#     if not reaction_is_neutral(rxn):
+#         print(rxn)
+        
+#         return None
+    
+#     'fired'
+#     for reactant_mpculeid in rxn.reactants:
+        
+#         spin = find_mpculeid_spin(reactant_mpculeid)
+        
+#         if spin == 2:
+            
+#             # reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
+#             # reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
+            
+#             # reactant_charges_are_zero = \
+#             #     reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
+            
+#             # if reactant_charges_are_zero:
+                
+#             return "neutral_radical"
+                
+#     return "neutral"
+
+# def determine_reactant_charges(rxn):
+#     pass
+
+# def determine_reaction_tag(rxn):
+#     pass
+# def handle_combination_reactions(rxn):
+#     """
+#     Helper function for handling the case when a reaction has two reactants
+#     combining to form one product.
+
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
+
+#     Returns
+#     -------
+#     string
+#         the classification of this particular type of combination reaction
+
+#     """
+        
+#     possible_classifications = [
+#         classify_ion_ion(rxn),
+#         classify_ion_molecule(rxn),
+#         classify_neutral_radical(rxn)
+#      ]
+    
+#     for classification in possible_classifications:
+#         if classification:
+#             return classification + "_combination"
+        
+#     return "neutral_recombination"
+
+# def handle_fragmentation_reactions(rxn):
+#     """
+#     Helper function for classifying fragmentation reactions, where one reactant
+#     breaks apart into two products.
+
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
+
+#     Returns
+#     -------
+#     string
+#         the classification of this particular type of fragmentation reaction
+
+#     """
+    
+#     reverse_reaction_dict = \
+#         {"reactants":rxn.products, "products":rxn.reactants}
+        
+#     reverse_reaction = HiPRGen_Reaction(reverse_reaction_dict)
+    
+#     possible_classifications = [
+#         classify_ion_ion(reverse_reaction),
+#         classify_ion_molecule(reverse_reaction),
+#         classify_neutral_radical(reverse_reaction)
+#       ]
+    
+#     for classification in possible_classifications:
+#         if classification:
+#             return classification + "_fragmentation"
+    
+#     return "misc_fragmentation"
+
+# def handle_isomerization_reactions(rxn):
+#     """
+#     Helper function dealing with unimolecular isomerization reactions,
+#     classifying them based on whether they occur for a neutral species, an ion,
+#     or a radical
+
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
+
+#     Returns
+#     -------
+#     string
+#         the classification of this particular type of isomerization reaction
+
+#     """
+#     reactant = rxn.reactants[0]
+#     product = rxn.products[0]
+    
+#     reactant_charge = find_mpculeid_charge(reactant)
+#     product_charge = find_mpculeid_charge(product)
+#     reactant_spin = find_mpculeid_spin(reactant)
+#     product_spin = find_mpculeid_spin(product)
+    
+#     if reactant_charge != product_charge:
+        
+#         return "charge isomerization"
+    
+#     if reactant_spin != 1 or product_spin != 1:
+        
+#         return "radical isomerization"
+    
+#     return "neutral isomerization"   
+    
+# def handle_bimolecular_biproduct_reactions(rxn):
+#     """
+#     Helper function that classifies reactions with two reactants and two
+#     products
+
+#     Parameters
+#     ----------
+#     rxn : HiPRGen rxn object
+#         reaction we're classifying
+
+#     Returns
+#     -------
+#     string
+#         the classification of this reaction
+#     """
+    
+#     possible_classifications = [
+#         classify_H(rxn),
+#         classify_ion_ion(rxn),
+#         classify_ion_molecule(rxn),
+#         classify_neutral_radical(rxn)
+#     ]
+
+#     for classification in possible_classifications:
+#         if classification:
+#             return classification
+
+#     return "misc_chemical"
+def determine_charge_name(mpculeid):
+    charge = find_mpculeid_charge(mpculeid)
+    
+    if charge > 0:
+        return "cation"
+    elif charge < 0:
+        return "anion"
+    else:
+        return "neutral"
+    
+def determine_species_subclass(mpculeid):
+    charge_name = determine_charge_name(mpculeid)
+    spin = find_mpculeid_spin(mpculeid)
+    
+    if spin == 2 and charge_name == "neutral":
+        
+        return charge_name + "_radical"
+    
+    elif spin == 2:
+        
+        return "radical_" + charge_name
+    
+    return charge_name
+    
+def handle_unimolecular_reactions(rxn):
+    single_reactant_mpculeid = rxn.reactants[0]
+    species_subclass = determine_species_subclass(single_reactant_mpculeid)
+    
+    if len(rxn.products) == 1:
+        return species_subclass + "_isomerization"
+    
+    return species_subclass + "_fragmentation"
+
+# def handle_bimolecular_biproduct_reactions(rxn, bimolecular_subclass):
+#     return bimolecular_subclass + reaction_is_electron_transfer(rxn) + classify_H(rxn)
+
+def determine_bimolecular_reactant_subclasses(rxn):
     reactant_1 = rxn.reactants[0]
     reactant_2 = rxn.reactants[1]
     
-    reactant_1_charge = find_mpculeid_charge(reactant_1)
-    reactant_2_charge = find_mpculeid_charge(reactant_2)
+    reactant_1_subclass = determine_species_subclass(reactant_1)
+    reactant_2_subclass = determine_species_subclass(reactant_2)
+    
+    if reactant_1_subclass != "neutral" and reactant_2_subclass == "neutral":
+        rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
+    elif reactant_2_subclass != "neutral" and reactant_1_subclass == "neutral":
+        rxn_subclass = reactant_2_subclass + "_" + reactant_1_subclass
+    else:
+        rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
+    
+    return rxn_subclass
 
-    if reactant_1_charge != reactant_2_charge:
-        return "ion-molecule"
-   
-    return None
-
-def classify_neutral_radical(rxn):
-    """
-    Classifies a reaction as "neutral radical" if both reactants have charges
-    of zero and one of the reactants has a spin of 2.
-
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
-
-    Returns
-    -------
-    str
-        "neutral radical" if the reaction is neutral radical, None otherwise.
-
-    """
-    if not reaction_is_neutral(rxn):
-        print(rxn)
+def handle_bimolecular_reactions(rxn):
+    bimolecular_subclass = determine_bimolecular_reactant_subclasses(rxn)
+    
+    if len(rxn.products) == 1:
+        return bimolecular_subclass + "_combination"
+    
+    electron_transfer_name = reaction_is_electron_transfer(rxn)
+    H_name = classify_H(rxn)
+    
+    bimolecular_biproduct_name = bimolecular_subclass
         
-        return None
-    
-    'fired'
-    for reactant_mpculeid in rxn.reactants:
-        
-        spin = find_mpculeid_spin(reactant_mpculeid)
-        
-        if spin == 2:
-            
-            # reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
-            # reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
-            
-            # reactant_charges_are_zero = \
-            #     reactant_1_charge == reactant_2_charge and reactant_1_charge == 0
-            
-            # if reactant_charges_are_zero:
-                
-            return "neutral_radical"
-                
-    return "neutral"
+    if electron_transfer_name or H_name:
+        bimolecular_biproduct_name += "_" + electron_transfer_name + H_name
+    # bimolecular_biproduct_name = \
+    #     bimolecular_subclass + electron_transfer_name + H_name
+    return bimolecular_biproduct_name
 
-def handle_combination_reactions(rxn):
-    """
-    Helper function for handling the case when a reaction has two reactants
-    combining to form one product.
-
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
-
-    Returns
-    -------
-    string
-        the classification of this particular type of combination reaction
-
-    """
-        
-    possible_classifications = [
-        classify_ion_ion(rxn),
-        classify_ion_molecule(rxn),
-        classify_neutral_radical(rxn)
-     ]
-    
-    for classification in possible_classifications:
-        if classification:
-            return classification + "_combination"
-        
-    return "neutral_recombination"
-
-def handle_fragmentation_reactions(rxn):
-    """
-    Helper function for classifying fragmentation reactions, where one reactant
-    breaks apart into two products.
-
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
-
-    Returns
-    -------
-    string
-        the classification of this particular type of fragmentation reaction
-
-    """
-    
-    reverse_reaction_dict = \
-        {"reactants":rxn.products, "products":rxn.reactants}
-        
-    reverse_reaction = HiPRGen_Reaction(reverse_reaction_dict)
-    
-    possible_classifications = [
-        classify_ion_ion(reverse_reaction),
-        classify_ion_molecule(reverse_reaction),
-        classify_neutral_radical(reverse_reaction)
-      ]
-    
-    for classification in possible_classifications:
-        if classification:
-            return classification + "_fragmentation"
-    
-    return "misc_fragmentation"
-
-def handle_isomerization_reactions(rxn):
-    """
-    Helper function dealing with unimolecular isomerization reactions,
-    classifying them based on whether they occur for a neutral species, an ion,
-    or a radical
-
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
-
-    Returns
-    -------
-    string
-        the classification of this particular type of isomerization reaction
-
-    """
-    reactant = rxn.reactants[0]
-    product = rxn.products[0]
-    
-    reactant_charge = find_mpculeid_charge(reactant)
-    product_charge = find_mpculeid_charge(product)
-    reactant_spin = find_mpculeid_spin(reactant)
-    product_spin = find_mpculeid_spin(product)
-    
-    if reactant_charge != product_charge:
-        
-        return "charge isomerization"
-    
-    if reactant_spin != 1 or product_spin != 1:
-        
-        return "radical isomerization"
-    
-    return "neutral isomerization"   
-    
-def handle_bimolecular_biproduct_reactions(rxn):
-    """
-    Helper function that classifies reactions with two reactants and two
-    products
-
-    Parameters
-    ----------
-    rxn : HiPRGen rxn object
-        reaction we're classifying
-
-    Returns
-    -------
-    string
-        the classification of this reaction
-    """
-    
-    possible_classifications = [
-        classify_H(rxn),
-        classify_ion_ion(rxn),
-        classify_ion_molecule(rxn),
-        classify_neutral_radical(rxn)
-    ]
-
-    for classification in possible_classifications:
-        if classification:
-            return classification
-
-    return "misc_chemical"
-    
 def determine_chemical_reaction_tag(rxn):
     """
     Tags chemical reactions by calling classification functions in a specific order.
@@ -547,17 +623,8 @@ def determine_chemical_reaction_tag(rxn):
     list
         The tag for the classified reaction
     """
-    
-    if len(rxn.reactants) == 2 and len(rxn.products) == 1:
+    if len(rxn.reactants) == 1:
         
-        return handle_combination_reactions(rxn)
+        return handle_unimolecular_reactions(rxn)
     
-    if len(rxn.reactants) == 1 and len(rxn.products) == 2:
-        
-        return handle_fragmentation_reactions(rxn)
-    
-    if len(rxn.reactants) == 1 and len(rxn.products) == 1:
-        
-        return handle_isomerization_reactions(rxn)
-          
-    return handle_bimolecular_biproduct_reactions(rxn)
+    return handle_bimolecular_reactions(rxn)
