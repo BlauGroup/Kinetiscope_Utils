@@ -14,6 +14,7 @@ from Rxn_classes import HiPRGen_Reaction
 import sys
 import copy
 
+
 def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
     """
     This function is called when we have determined that a given reaction
@@ -600,9 +601,7 @@ def determine_bimolecular_reactant_subclasses(rxn):
     reactant_2 = rxn.reactants[1]
     
     reactant_1_subclass = determine_species_subclass(reactant_1)
-    print(reactant_1_subclass)
     reactant_2_subclass = determine_species_subclass(reactant_2)
-    print(reactant_2_subclass)
     
     ordered_name = \
         generate_ordered_name(reactant_1_subclass, reactant_2_subclass)
