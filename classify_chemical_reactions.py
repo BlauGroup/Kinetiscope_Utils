@@ -553,7 +553,6 @@ def determine_charge_name(mpculeid):
 def determine_species_subclass(mpculeid):
     charge_name = determine_charge_name(mpculeid)
     spin = find_mpculeid_spin(mpculeid)
-    print(type(spin))
     
     if spin == 2 and charge_name == "neutral":
         
@@ -574,24 +573,47 @@ def handle_unimolecular_reactions(rxn):
     
     return species_subclass + "_fragmentation"
 
-# def handle_bimolecular_biproduct_reactions(rxn, bimolecular_subclass):
-#     return bimolecular_subclass + reaction_is_electron_transfer(rxn) + classify_H(rxn)
+def generate_ordered_name(reactant_1_subclass, reactant_2_subclass):
+    
+    priority_dict = {
+            "radical_anion":5,
+            "radical_cation":4,
+            "anion":3,
+            "cation":2,
+            "neutral_radical":1,
+            "neutral":0
+            }
+    
+    reactant_1_priority = priority_dict.get(reactant_1_subclass)
+    reactant_2_priority = priority_dict.get(reactant_2_subclass)
+    
+    if reactant_1_priority > reactant_2_priority:
+        ordered_name = reactant_1_subclass + "_" + reactant_2_subclass
+    else:
+        ordered_name = reactant_2_subclass + "_" + reactant_1_subclass
+    
+    return ordered_name
+    
 
 def determine_bimolecular_reactant_subclasses(rxn):
     reactant_1 = rxn.reactants[0]
     reactant_2 = rxn.reactants[1]
     
     reactant_1_subclass = determine_species_subclass(reactant_1)
+    print(reactant_1_subclass)
     reactant_2_subclass = determine_species_subclass(reactant_2)
+    print(reactant_2_subclass)
     
-    if reactant_1_subclass != "neutral" and reactant_2_subclass == "neutral":
-        rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
-    elif reactant_2_subclass != "neutral" and reactant_1_subclass == "neutral":
-        rxn_subclass = reactant_2_subclass + "_" + reactant_1_subclass
-    else:
-        rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
+    ordered_name = \
+        generate_ordered_name(reactant_1_subclass, reactant_2_subclass)
+    # if reactant_1_subclass != "neutral" and reactant_2_subclass == "neutral":
+    #     rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
+    # elif reactant_2_subclass != "neutral" and reactant_1_subclass == "neutral":
+    #     rxn_subclass = reactant_2_subclass + "_" + reactant_1_subclass
+    # else:
+    #     rxn_subclass = reactant_1_subclass + "_" + reactant_2_subclass
     
-    return rxn_subclass
+    return ordered_name
 
 def handle_bimolecular_reactions(rxn):
     bimolecular_subclass = determine_bimolecular_reactant_subclasses(rxn)
