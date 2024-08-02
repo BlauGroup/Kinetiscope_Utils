@@ -164,7 +164,7 @@ for product_dict in network_products.values():
             rxns_for_simulation, rxns_already_added = \
                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
-tagged_rxn_dict = {"ionization":{}, "chemical":{}}
+tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{}, "bimolecular":{}}}
 added_tags = set()
 ionization_classifications = set(["positive_ionization", "electron_attachment",
                                   "electron_cation_recombination"])
@@ -173,12 +173,17 @@ for reaction in rxns_for_simulation:
     
     superclass = \
         "ionization" if reaction.tag in ionization_classifications else "chemical"
-
-    if reaction.tag not in tagged_rxn_dict[superclass]:
         
-        tagged_rxn_dict[superclass][reaction.tag] = []
+    if "fragmentation" in reaction.tag or "isomerization" in reaction.tag:
+        subclass = "unimolecular"
+    else:
+        subclass = "bimolecular"
+        
+    if reaction.tag not in tagged_rxn_dict[superclass][subclass]:
+        
+        tagged_rxn_dict[superclass][subclass][reaction.tag] = []
 
-    tagged_rxn_dict[superclass][reaction.tag].append(reaction)
+    tagged_rxn_dict[superclass][subclass][reaction.tag].append(reaction)
     
 dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
