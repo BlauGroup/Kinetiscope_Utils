@@ -47,11 +47,13 @@ class HiPRGen_Reaction(MSONable):
         return cls(d)
     
 class Kinetiscope_Reaction(MSONable):
-    def __init__(self, kinetiscope_name, rate_coefficient, order, tag):
+    def __init__(self, HiPRGen_rxn, kinetiscope_name, rate_coefficient, order, tag, marker_species):
+        self.HiPRGen_rxn = HiPRGen_rxn
         self.kinetiscope_name = kinetiscope_name
         self.rate_coefficient = rate_coefficient
         self.reaction_order = order
         self.tag = tag
+        self.marker_species = marker_species
         
     def as_dict(self):
         # Convert reaction attributes to dictionary
