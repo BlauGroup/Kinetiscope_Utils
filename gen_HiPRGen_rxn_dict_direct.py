@@ -19,6 +19,7 @@ from reaction_classification_utilities import (
     add_reaction_if_new,
     find_mpculeid_charge
     )
+from gen_chemical_reaction_classification import write_reaction_classification
 
 __version__ = '1.1.0'
 
@@ -90,89 +91,34 @@ def add_high_frequency_P2_reactions(directory, rxns_for_simulation, rxns_already
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
 
-def add_reaction_to_nested_dict(rxn_dict, keys, reaction):
-    """Helper function to add a reaction to a nested dictionary."""
-    d = rxn_dict
+def add_value_to_nested_dict(value, keys, nested_dict):
+    """
+    Adds a value to a nested dictionary, creating dictionaries and lists as needed.
+
+    Parameters:
+    value (Any): The value to add.
+    keys (list): A list of keys representing the path in the nested dictionary.
+    nested_dict (dict): The nested dictionary to update.
+    """
+    current_level = nested_dict
+    # Traverse the dictionary up to the second to last key
     for key in keys[:-1]:
-        if key not in d:
-            d[key] = {}
-        d = d[key]
-    if keys[-1] not in d:
-        d[keys[-1]] = []
-    d[keys[-1]].append(reaction)
-
-def add_reaction_to_dict(rxn, rxn_dict, category, reaction_type=None, subclass=None, subtype=None, subcategory=None):
-    keys = [category]
-    possible_keys = [reaction_type, subclass, subtype, subcategory]
-    for possible_key in possible_keys:
-        if possible_key is None:
-            break
-        keys.append(possible_key)
-    keys.append(reaction.tag)
-    add_reaction_to_nested_dict(rxn_dict, keys, reaction)
-    return rxn_dict
-
-def add_unimolecular_reaction(rxn, rxn_dict):
-    subclass = "fragmentation" if "fragmentation" in reaction.tag else "isomerization"
-    return add_reaction_to_dict(rxn, rxn_dict, "chemical", "unimolecular", subclass)
-
-def add_bimolecular_reaction(rxn, rxn_dict):
-    subtype = determine_bimolecular_subtype(rxn)
-    if "combination" in reaction.tag:
-        subclass = "combination"
-        return add_reaction_to_dict(rxn, rxn_dict, "chemical", "bimolecular", subclass, subtype)
+        if key not in current_level:
+            current_level[key] = {}
+        current_level = current_level[key]
     
-    subclass = "biproduct"
-    subcategories = [
-        "proton_transfer",
-        "hydride_abstraction",
-        "H_atom_abstraction",
-        "proton_coupled_electron_transfer",
-        "electron_transfer",
-        "reaction"
-    ]
+    # Handle the last key
+    last_key = keys[-1]
+    if last_key not in current_level:
+        current_level[last_key] = []
     
-    for subcategory in subcategories:
-        if subcategory in reaction.tag:
-            return add_reaction_to_dict(rxn, rxn_dict, "chemical", "bimolecular", subclass, subtype, subcategory)
+    current_level[last_key].append(value)
+
+def add_reaction_to_dictionary(reaction, reaction_dict):
+    classification_list = reaction.classification_list
+    add_value_to_nested_dict(reaction, classification_list, reaction_dict)
+    return reaction_dict
     
-    return rxn_dict
-
-def add_chemical_reactions(rxn, rxn_dict):
-    if "fragmentation" in reaction.tag or "isomerization" in reaction.tag:
-        return add_unimolecular_reaction(rxn, rxn_dict)
-    return add_bimolecular_reaction(rxn, rxn_dict)
-
-def add_ionization_reactions(rxn, rxn_dict):
-    return add_reaction_to_dict(rxn, rxn_dict, "ionization")
-
-def add_to_rxn_dict(rxn, rxn_dict, ionization_classifications):
-    if reaction.tag in ionization_classifications:
-        return add_ionization_reactions(rxn, rxn_dict)
-    return add_chemical_reactions(rxn, rxn_dict)
-
-def find_reactant_charges(rxn):
-    reactant_1_charge = find_mpculeid_charge(rxn.reactants[0])
-    reactant_2_charge = find_mpculeid_charge(rxn.reactants[1])
-    return reactant_1_charge, reactant_2_charge
-
-def reaction_is_neutral(rxn):
-    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn)
-    return reactant_1_charge == reactant_2_charge == 0
-
-def reaction_is_ion_molecule(rxn):
-    reactant_1_charge, reactant_2_charge = find_reactant_charges(rxn)
-    charges_are_different = reactant_1_charge != reactant_2_charge
-    one_charge_zero = reactant_1_charge == 0 or reactant_2_charge == 0
-    return charges_are_different and one_charge_zero
-
-def determine_bimolecular_subtype(rxn):
-    if reaction_is_neutral(rxn):
-        return "neutral"
-    elif reaction_is_ion_molecule(rxn):
-        return "ion-molecule"
-    else:
-        return "ion-ion"
     
 # add all P1 reactions
 P1_directory = "G:/My Drive/CRNs/071924_test_p1"
@@ -238,43 +184,46 @@ for product_dict in network_products.values():
             rxns_for_simulation, rxns_already_added = \
                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
-tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
-ionization_classifications = set(["positive_ionization", "electron_attachment",
-                                  "electron_cation_recombination"])
+# tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
+# ionization_classifications = set(["positive_ionization", "electron_attachment",
+#                                   "electron_cation_recombination"])
+tagged_rxn_dict = {}
 
 for reaction in rxns_for_simulation:
     
-    tagged_rxn_dict = \
-        add_to_rxn_dict(
-            reaction, tagged_rxn_dict, ionization_classifications
-            )
+    reaction.classification_list = write_reaction_classification(reaction)
+    add_reaction_to_dictionary(reaction, tagged_rxn_dict)
+    # tagged_rxn_dict = \
+    #     add_to_rxn_dict(
+    #         reaction, tagged_rxn_dict, ionization_classifications
+    #         )
     
-dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
+# dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
-# def print_reaction_dict_summary(dictionary):
-#     """
-#     Prints a summary of reactions in the nested dictionary.
+def print_reaction_dict_summary(dictionary):
+    """
+    Prints a summary of reactions in the nested dictionary.
     
-#     Parameters:
-#     - dictionary: A nested dictionary with a structure including categories,
-#                   reaction types, subclasses, subtypes, and tags, each containing lists of reactions.
-#     """
-#     total_number_rxns = 0
+    Parameters:
+    - dictionary: A nested dictionary with a structure including categories,
+                  reaction types, subclasses, subtypes, and tags, each containing lists of reactions.
+    """
+    total_number_rxns = 0
     
-#     def count_reactions(d):
-#         nonlocal total_number_rxns
-#         if isinstance(d, list):
-#             total_number_rxns += len(d)
-#         elif isinstance(d, dict):
-#             for key, value in d.items():
-#                 if isinstance(value, (list, dict)):
-#                     count_reactions(value)
+    def count_reactions(d):
+        nonlocal total_number_rxns
+        if isinstance(d, list):
+            total_number_rxns += len(d)
+        elif isinstance(d, dict):
+            for key, value in d.items():
+                if isinstance(value, (list, dict)):
+                    count_reactions(value)
     
-#     for category, types_dict in dictionary.items():
-#         print(f"Category '{category}':")
-#         count_reactions(types_dict)
+    for category, types_dict in dictionary.items():
+        print(f"Category '{category}':")
+        count_reactions(types_dict)
     
-#     print(f"Total number of reactions in the dictionary: {total_number_rxns}")
+    print(f"Total number of reactions in the dictionary: {total_number_rxns}")
 def print_reaction_dict_summary(dictionary):
     """
     Prints a detailed summary of reactions in the nested dictionary,

@@ -10,11 +10,11 @@ __version__ = '1.0.0'
 from monty.json import MSONable
 
 class HiPRGen_Reaction(MSONable):
-    def __init__(self, reaction_dict, phase=None, tag=None):
+    def __init__(self, reaction_dict, classification_list=None, phase=None, tag=None):
         self.reactants = sorted([r for r in reaction_dict["reactants"] if r is not None])
         self.products = sorted([p for p in reaction_dict["products"] if p is not None])
         self.phase = phase
-        # self.reaction_hash = self.write_reaction_hash()
+        self.classification_list = classification_list
         self.tag = tag
         self.name = self.generate_reaction_string()
 
