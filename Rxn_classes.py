@@ -22,10 +22,6 @@ class HiPRGen_Reaction(MSONable):
         reactants_str = " + ".join(self.reactants)
         products_str = " + ".join(self.products)
         return f"{reactants_str} => {products_str}"
-    
-    # def write_reaction_hash(self): #after testing these are unique
-    #     reaction_hash = ''.join(self.reactants) + "=>"  + ''.join(self.products)
-    #     return reaction_hash
             
     def as_dict(self):
         return {
@@ -34,7 +30,6 @@ class HiPRGen_Reaction(MSONable):
             "reactants": self.reactants,
             "products": self.products,
             "phase": self.phase,
-            # "reaction_hash": self.reaction_hash,
             "tag": self.tag,
             "name": self.name
         }
@@ -52,7 +47,7 @@ class Kinetiscope_Reaction(MSONable):
         self.kinetiscope_name = kinetiscope_name
         self.rate_coefficient = rate_coefficient
         self.reaction_order = order
-        self.tag = tag
+        self.kinetiscope_tag = tag
         self.marker_species = marker_species
         
     def as_dict(self):
