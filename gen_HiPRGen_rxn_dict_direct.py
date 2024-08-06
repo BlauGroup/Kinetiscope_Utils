@@ -116,13 +116,14 @@ def add_value_to_nested_dict(value, keys, nested_dict):
 
 def add_reaction_to_dictionary(reaction, reaction_dict):
     classification_list = reaction.classification_list
+    print(classification_list[:-1])
     add_value_to_nested_dict(reaction, classification_list, reaction_dict)
     return reaction_dict
     
     
 # add all P1 reactions
-# P1_directory = "G:/My Drive/CRNs/071924_test_p1"
-P1_directory = "G:/My Drive/CRNs/071924_p1"
+P1_directory = "G:/My Drive/CRNs/071924_test_p1"
+# P1_directory = "G:/My Drive/CRNs/071924_p1"
 os.chdir(P1_directory)
 P1_pathways_and_reactions = loadfn("reaction_tally.json") 
 P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
@@ -153,8 +154,8 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
  
 #add all P2 reactions that fired >= 500 times
 
-# P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-P2_directory = "G:/My Drive/CRNs/071924_p2"
+P2_directory = "G:/My Drive/CRNs/071924_test_p2"
+# P2_directory = "G:/My Drive/CRNs/071924_p2"
 
 add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
 
@@ -200,30 +201,30 @@ for reaction in rxns_for_simulation:
     
 # dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
-def print_reaction_dict_summary(dictionary):
-    """
-    Prints a summary of reactions in the nested dictionary.
+# def print_reaction_dict_summary(dictionary):
+#     """
+#     Prints a summary of reactions in the nested dictionary.
     
-    Parameters:
-    - dictionary: A nested dictionary with a structure including categories,
-                  reaction types, subclasses, subtypes, and tags, each containing lists of reactions.
-    """
-    total_number_rxns = 0
+#     Parameters:
+#     - dictionary: A nested dictionary with a structure including categories,
+#                   reaction types, subclasses, subtypes, and tags, each containing lists of reactions.
+#     """
+#     total_number_rxns = 0
     
-    def count_reactions(d):
-        nonlocal total_number_rxns
-        if isinstance(d, list):
-            total_number_rxns += len(d)
-        elif isinstance(d, dict):
-            for key, value in d.items():
-                if isinstance(value, (list, dict)):
-                    count_reactions(value)
+#     def count_reactions(d):
+#         nonlocal total_number_rxns
+#         if isinstance(d, list):
+#             total_number_rxns += len(d)
+#         elif isinstance(d, dict):
+#             for key, value in d.items():
+#                 if isinstance(value, (list, dict)):
+#                     count_reactions(value)
     
-    for category, types_dict in dictionary.items():
-        print(f"Category '{category}':")
-        count_reactions(types_dict)
+#     for category, types_dict in dictionary.items():
+#         print(f"Category '{category}':")
+#         count_reactions(types_dict)
     
-    print(f"Total number of reactions in the dictionary: {total_number_rxns}")
+#     print(f"Total number of reactions in the dictionary: {total_number_rxns}")
 def print_reaction_dict_summary(dictionary):
     """
     Prints a detailed summary of reactions in the nested dictionary,
