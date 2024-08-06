@@ -413,5 +413,4 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
         name_mpcule_dict[new_stereos[-2]] =  old_mpculeid #we assign this one just so the following line is valid regardless of whether or not this test fired
         name_mpcule_dict.pop(test_name)
         
-    name_mpcule_dict[new_stereos[-1]] = mpculeid 
-    
+    name_mpcule_dict[new_stereos[-1]] = mpculeid

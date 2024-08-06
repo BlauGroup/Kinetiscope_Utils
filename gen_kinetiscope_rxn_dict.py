@@ -27,7 +27,7 @@ def write_kinetiscope_name(HiPRGen_name, mpculeid_dict, marker_species):
         if kinetiscope_name:
             reaction_as_list[index] = kinetiscope_name
     
-    name_without_marker_species = reaction_as_list.join()
+    name_without_marker_species = "".join(reaction_as_list)
     name_with_marker_species = add_marker_species(name_without_marker_species)
     return name_with_marker_species        
     

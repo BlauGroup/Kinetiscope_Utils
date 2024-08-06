@@ -121,8 +121,8 @@ def add_reaction_to_dictionary(reaction, reaction_dict):
     
     
 # add all P1 reactions
-P1_directory = "G:/My Drive/CRNs/071924_test_p1"
-# P1_directory = "G:/My Drive/CRNs/071924_p1"
+# P1_directory = "G:/My Drive/CRNs/071924_test_p1"
+P1_directory = "G:/My Drive/CRNs/071924_p1"
 os.chdir(P1_directory)
 P1_pathways_and_reactions = loadfn("reaction_tally.json") 
 P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
@@ -153,8 +153,8 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
  
 #add all P2 reactions that fired >= 500 times
 
-P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-# P2_directory = "G:/My Drive/CRNs/071924_p2"
+# P2_directory = "G:/My Drive/CRNs/071924_test_p2"
+P2_directory = "G:/My Drive/CRNs/071924_p2"
 
 add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
 
