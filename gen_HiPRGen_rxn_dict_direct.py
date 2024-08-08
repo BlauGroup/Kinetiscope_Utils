@@ -116,14 +116,13 @@ def add_value_to_nested_dict(value, keys, nested_dict):
 
 def add_reaction_to_dictionary(reaction, reaction_dict):
     classification_list = reaction.classification_list
-    print(classification_list[:-1])
     add_value_to_nested_dict(reaction, classification_list, reaction_dict)
     return reaction_dict
     
     
 # add all P1 reactions
-P1_directory = "G:/My Drive/CRNs/071924_test_p1"
-# P1_directory = "G:/My Drive/CRNs/071924_p1"
+# P1_directory = "G:/My Drive/CRNs/071924_test_p1"
+P1_directory = "G:/My Drive/CRNs/071924_p1"
 os.chdir(P1_directory)
 P1_pathways_and_reactions = loadfn("reaction_tally.json") 
 P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
@@ -154,50 +153,51 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
  
 #add all P2 reactions that fired >= 500 times
 
-P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-# P2_directory = "G:/My Drive/CRNs/071924_p2"
+# P2_directory = "G:/My Drive/CRNs/071924_test_p2"
+# # P2_directory = "G:/My Drive/CRNs/071924_p2"
 
-add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
+# add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
 
-network_products = loadfn("sink_report.json")
+# network_products = loadfn("sink_report.json")
 
-for product_dict in network_products.values():
+# for product_dict in network_products.values():
     
-    species_index = product_dict["species_index"]
-    reactions_and_pathways = \
-        loadfn(str(species_index) + "_pathway.json")
-    all_pathways_list = list(reactions_and_pathways["pathways"])
-    all_reactions = reactions_and_pathways["reactions"]
-    sorted_pathways_list = sort_pathways_list(all_pathways_list)
-    to_save_pathways = []
+#     species_index = product_dict["species_index"]
+#     reactions_and_pathways = \
+#         loadfn(str(species_index) + "_pathway.json")
+#     all_pathways_list = list(reactions_and_pathways["pathways"])
+#     all_reactions = reactions_and_pathways["reactions"]
+#     sorted_pathways_list = sort_pathways_list(all_pathways_list)
+#     to_save_pathways = []
     
-    for pathway_dict in sorted_pathways_list:
-        pathway = pathway_dict["pathway"]
-        to_save_pathways.append(pathway)
-        number_pathways_saved = len(to_save_pathways)
+#     for pathway_dict in sorted_pathways_list:
+#         pathway = pathway_dict["pathway"]
+#         to_save_pathways.append(pathway)
+#         number_pathways_saved = len(to_save_pathways)
         
-        if number_pathways_saved >= 10:
-            break
+#         if number_pathways_saved >= 10:
+#             break
     
-    for pathway in to_save_pathways:
-        for reaction in pathway:
-            rxn_dict = all_reactions.get(str(reaction), None)
-            rxns_for_simulation, rxns_already_added = \
-                        process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
+#     for pathway in to_save_pathways:
+#         for reaction in pathway:
+#             rxn_dict = all_reactions.get(str(reaction), None)
+#             rxns_for_simulation, rxns_already_added = \
+#                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
                         
-# tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
-# ionization_classifications = set(["positive_ionization", "electron_attachment",
-#                                   "electron_cation_recombination"])
-tagged_rxn_dict = {}
+# # tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
+# # ionization_classifications = set(["positive_ionization", "electron_attachment",
+# #                                   "electron_cation_recombination"])
+# tagged_rxn_dict = {}
 
-for reaction in rxns_for_simulation:
+# for reaction in rxns_for_simulation:
     
-    reaction.classification_list = write_reaction_classification(reaction)
-    add_reaction_to_dictionary(reaction, tagged_rxn_dict)
-    # tagged_rxn_dict = \
-    #     add_to_rxn_dict(
-    #         reaction, tagged_rxn_dict, ionization_classifications
-    #         )
+#     reaction.classification_list = write_reaction_classification(reaction)
+#     add_reaction_to_dictionary(reaction, tagged_rxn_dict)
+#     # print(reaction.classification_list)
+#     # tagged_rxn_dict = \
+#     #     add_to_rxn_dict(
+#     #         reaction, tagged_rxn_dict, ionization_classifications
+#     #         )
     
 # dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
 
@@ -224,63 +224,63 @@ for reaction in rxns_for_simulation:
 #         print(f"Category '{category}':")
 #         count_reactions(types_dict)
     
-#     print(f"Total number of reactions in the dictionary: {total_number_rxns}")
-def print_reaction_dict_summary(dictionary):
-    """
-    Prints a detailed summary of reactions in the nested dictionary,
-    including the values of each list and all associated dictionary keys.
+# #     print(f"Total number of reactions in the dictionary: {total_number_rxns}")
+# def print_reaction_dict_summary(dictionary):
+#     """
+#     Prints a detailed summary of reactions in the nested dictionary,
+#     including the values of each list and all associated dictionary keys.
     
-    Parameters:
-    - dictionary: A nested dictionary with categories, reaction types, subclasses,
-                  subtypes, and tags, each containing lists of reactions.
-    """
-    def print_dict(d, level=0):
-        """
-        Recursively prints the dictionary structure, lists, and their values.
+#     Parameters:
+#     - dictionary: A nested dictionary with categories, reaction types, subclasses,
+#                   subtypes, and tags, each containing lists of reactions.
+#     """
+#     def print_dict(d, level=0):
+#         """
+#         Recursively prints the dictionary structure, lists, and their values.
         
-        Parameters:
-        - d: The dictionary or list to print.
-        - level: The current level of recursion, used for formatting.
-        """
-        indent = "  " * level
-        if isinstance(d, list):
-            # Print the length of the list and its items
-            print(f"{indent}List with {len(d)} reactions")
-            # for item in d:
-            #     print(f"{indent}  {item}")  # Print each reaction in the list
-        elif isinstance(d, dict):
-            for key, value in d.items():
-                print(f"{indent}Key '{key}':")
-                print_dict(value, level + 1)  # Recursively print nested dictionary or list
+#         Parameters:
+#         - d: The dictionary or list to print.
+#         - level: The current level of recursion, used for formatting.
+#         """
+#         indent = "  " * level
+#         if isinstance(d, list):
+#             # Print the length of the list and its items
+#             print(f"{indent}List with {len(d)} reactions")
+#             # for item in d:
+#             #     print(f"{indent}  {item}")  # Print each reaction in the list
+#         elif isinstance(d, dict):
+#             for key, value in d.items():
+#                 print(f"{indent}Key '{key}':")
+#                 print_dict(value, level + 1)  # Recursively print nested dictionary or list
     
-    print("Reaction Dictionary Summary:")
-    print_dict(dictionary)
-    print(f"Total number of reactions in the dictionary: {count_reactions(dictionary)}")
+#     print("Reaction Dictionary Summary:")
+#     print_dict(dictionary)
+#     print(f"Total number of reactions in the dictionary: {count_reactions(dictionary)}")
 
-def count_reactions(d):
-    """ 
-    Counts the total number of reactions in the nested dictionary.
+# def count_reactions(d):
+#     """ 
+#     Counts the total number of reactions in the nested dictionary.
 
-    Parameters:
-    - d: The dictionary or list to count reactions from.
+#     Parameters:
+#     - d: The dictionary or list to count reactions from.
     
-    Returns:
-    - The total number of reactions in the nested structure.
-    """
-    if isinstance(d, list):
-        return len(d)
-    elif isinstance(d, dict):
-        return sum(count_reactions(value) for value in d.values())
-    return 0
+#     Returns:
+#     - The total number of reactions in the nested structure.
+#     """
+#     if isinstance(d, list):
+#         return len(d)
+#     elif isinstance(d, dict):
+#         return sum(count_reactions(value) for value in d.values())
+#     return 0
 
-# def print_dict_lengths(dictionary):
-#     total_number_rxns = 0
-#     for superclass, tags_dict in dictionary.items():
-#         print(f"Superclass '{superclass}':")
-#         for tag, reactions in tags_dict.items():
-#             value_length = len(reactions)
-#             total_number_rxns += value_length
-#             print(f"  Tag '{tag}' has {value_length} reactions")
-#     print(f"total number of reactions in test set: {total_number_rxns}")
+# # def print_dict_lengths(dictionary):
+# #     total_number_rxns = 0
+# #     for superclass, tags_dict in dictionary.items():
+# #         print(f"Superclass '{superclass}':")
+# #         for tag, reactions in tags_dict.items():
+# #             value_length = len(reactions)
+# #             total_number_rxns += value_length
+# #             print(f"  Tag '{tag}' has {value_length} reactions")
+# #     print(f"total number of reactions in test set: {total_number_rxns}")
 
-print_reaction_dict_summary(tagged_rxn_dict)
+# print_reaction_dict_summary(tagged_rxn_dict)
