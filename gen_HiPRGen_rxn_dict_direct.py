@@ -69,7 +69,7 @@ def sort_pathways_list(pathways_list):
     sorted_list = sorted(pathways_list, key=lambda x: (x['weight'], x['frequency']))
     return sorted_list
 
-def add_high_frequency_P2_reactions(directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500):
+def add_high_frequency_P2_reactions(directory, rxns_for_simulation, rxns_already_added, frequency_threshold):
     
     try:
         os.chdir(directory)  
@@ -130,7 +130,7 @@ rxns_already_added = set()
 rxns_for_simulation = []
 
 for rxn_dict in P1_rxn_dicts:
-    
+
     new_rxn = HiPRGen_Reaction(rxn_dict,phase=1)
     
     if reaction_is_ionization(new_rxn):
@@ -150,56 +150,57 @@ for reaction in rxns_for_simulation: #can narrow down here when we have all
     if reaction.tag == "attachment_or_recombination":
         
         reaction.tag = narrow_down_ionization_type(reaction, rxns_for_simulation)
- 
+
+
 #add all P2 reactions that fired >= 500 times
 
 # P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-# # P2_directory = "G:/My Drive/CRNs/071924_p2"
+P2_directory = "G:/My Drive/CRNs/071924_p2"
 
-# add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
+add_high_frequency_P2_reactions(P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold=500)
 
-# network_products = loadfn("sink_report.json")
+network_products = loadfn("sink_report.json")
 
-# for product_dict in network_products.values():
+for product_dict in network_products.values():
     
-#     species_index = product_dict["species_index"]
-#     reactions_and_pathways = \
-#         loadfn(str(species_index) + "_pathway.json")
-#     all_pathways_list = list(reactions_and_pathways["pathways"])
-#     all_reactions = reactions_and_pathways["reactions"]
-#     sorted_pathways_list = sort_pathways_list(all_pathways_list)
-#     to_save_pathways = []
+    species_index = product_dict["species_index"]
+    reactions_and_pathways = \
+        loadfn(str(species_index) + "_pathway.json")
+    all_pathways_list = list(reactions_and_pathways["pathways"])
+    all_reactions = reactions_and_pathways["reactions"]
+    sorted_pathways_list = sort_pathways_list(all_pathways_list)
+    to_save_pathways = []
     
-#     for pathway_dict in sorted_pathways_list:
-#         pathway = pathway_dict["pathway"]
-#         to_save_pathways.append(pathway)
-#         number_pathways_saved = len(to_save_pathways)
+    for pathway_dict in sorted_pathways_list:
+        pathway = pathway_dict["pathway"]
+        to_save_pathways.append(pathway)
+        number_pathways_saved = len(to_save_pathways)
         
-#         if number_pathways_saved >= 10:
-#             break
+        if number_pathways_saved >= 10:
+            break
     
-#     for pathway in to_save_pathways:
-#         for reaction in pathway:
-#             rxn_dict = all_reactions.get(str(reaction), None)
-#             rxns_for_simulation, rxns_already_added = \
-#                         process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
-                        
-# # tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
-# # ionization_classifications = set(["positive_ionization", "electron_attachment",
-# #                                   "electron_cation_recombination"])
-# tagged_rxn_dict = {}
+    for pathway in to_save_pathways:
+        for reaction in pathway:
+            rxn_dict = all_reactions.get(str(reaction), None)
+            rxns_for_simulation, rxns_already_added = \
+                        process_P2_reaction(rxn_dict, rxns_for_simulation, rxns_already_added)
+                     
+tagged_rxn_dict = {"ionization":{}, "chemical":{"unimolecular":{"fragmentation":{},"isomerization":{}}, "bimolecular":{"combination":{}, "biproduct":{}}}}
+ionization_classifications = set(["positive_ionization", "electron_attachment",
+                                  "electron_cation_recombination"])
+tagged_rxn_dict = {}
 
-# for reaction in rxns_for_simulation:
+for reaction in rxns_for_simulation:
     
-#     reaction.classification_list = write_reaction_classification(reaction)
-#     add_reaction_to_dictionary(reaction, tagged_rxn_dict)
-#     # print(reaction.classification_list)
-#     # tagged_rxn_dict = \
-#     #     add_to_rxn_dict(
-#     #         reaction, tagged_rxn_dict, ionization_classifications
-#     #         )
-    
-# dumpfn(tagged_rxn_dict,"HiPRGen_rxns_to_name.json")
+    reaction.classification_list = write_reaction_classification(reaction)
+    add_reaction_to_dictionary(reaction, tagged_rxn_dict)
+    # tagged_rxn_dict = \
+    #     add_to_rxn_dict(
+    #         reaction, tagged_rxn_dict, ionization_classifications
+    #         )
+
+json_name = "HiPRGen_rxns_to_name_full.json"
+dumpfn(tagged_rxn_dict, json_name)
 
 # def print_reaction_dict_summary(dictionary):
 #     """
