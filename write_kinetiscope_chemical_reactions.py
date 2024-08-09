@@ -28,7 +28,7 @@ def add_reaction_with_excited_reactant(name_without_excitation, H_rxn, reaction_
     rate_constant = rate_constant_dict["chemical"].get(ordinal_number_order, None)
     name_with_excited_reactant = write_name_with_excited_reactant(name_without_excitation, reactant)
     marker_species = replace_tag_with_shorthand(H_rxn.classification_list, shorthand_dict)
-    excited_reaction = build_rxn_object(H_rxn,  name_with_excited_reactant, rate_constant, order, marker_species)
+    excited_reaction = build_rxn_object(H_rxn, name_with_excited_reactant, rate_constant, order, marker_species)
     reaction_list.append(excited_reaction)
     return reaction_list
     
@@ -47,10 +47,8 @@ def build_dexcitation_reaction(H_rxn, dexcitation_reaction_name, rate_constant_d
     de_rate_constant = rate_constant_dict["chemical"].get("1st_order", None)
     de_species = ["dexcitation"]
     dexcitation_reaction_name = dexcitation_reaction_name + " + dexcitation"
-    # print(reaction_list)
     dexcitation_reaction = build_rxn_object(H_rxn, dexcitation_reaction_name, de_rate_constant, de_order, de_species)
-    reaction_list.append(dexcitation_reaction)
-    return reaction_list
+    return dexcitation_reaction
 
 def add_dexcitation_reaction(excitation_name, reactant, H_rxn, rate_constant_dict, reaction_list):
     dexcitation_name = write_dexcitation_reaction_name(excitation_name, reactant)
@@ -97,7 +95,7 @@ def write_name_without_excitation(H_rxn, mpculeid_name_dict, marker_species_shor
         write_kinetiscope_name(H_name, mpculeid_name_dict, added_reactants, marker_species)
     return kinetiscope_name
 
-def handle_phase_1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set):
+def handle_phase1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set):
     reaction_list = []
     name_without_excitation = write_name_without_excitation(H_rxn, mpculeid_name_dict, marker_species_shorthand)
     
@@ -110,8 +108,21 @@ def handle_phase_1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_d
             add_reaction_with_excited_reactant(name_without_excitation, H_rxn, reaction_list, reactant, rate_constant_dict, marker_species_shorthand)
         
     return reaction_list, excitation_set
-       
-def handle_chemical_rxns(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set):
-    if H_rxn.phase == 1:
-        return handle_phase_1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set)
-    pass
+
+def handle_phase2_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand):
+    added_reactants = None
+    added_products = replace_tag_with_shorthand(H_rxn.classification_list, marker_species_shorthand)
+    H_name = H_rxn.name
+    kinetiscope_name = write_kinetiscope_name(H_name, mpculeid_name_dict, added_reactants, added_products)
+    ordinal_number_order = determine_ordinal_number_order(H_rxn)
+    order = 2 if ordinal_number_order == "2nd_order" else 1 
+    rate_constant = rate_constant_dict["chemical"].get(ordinal_number_order, None)
+    # print(build_rxn_object(H_rxn, kinetiscope_name, rate_constant, order, added_products))
+    return build_rxn_object(H_rxn, kinetiscope_name, rate_constant, order, added_products)
+
+# def handle_phase_1_chemical_rxns(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set):
+    
+# def handle_chemical_rxns(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set):
+#     if H_rxn.phase == 1:
+#         return handle_phase_1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set)
+#     return handle_phase_2_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand)
