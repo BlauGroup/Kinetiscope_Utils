@@ -9,13 +9,14 @@ __version__ = '1.1.0'
 import os
 import sys
 from monty.serialization import loadfn, dumpfn
-from Rxn_classes import HiPRGen_Reaction, Kinetiscope_Reaction
-import sys
+# from Rxn_classes import HiPRGen_Reaction, Kinetiscope_Reaction
+# import sys
 from write_kinetiscope_ionization_reactions import handle_ionization_reactions
 from write_kinetiscope_chemical_reactions import (
 handle_phase1_chemical_reactions,
 handle_phase2_chemical_reactions
 )
+import csv
 
 def collect_lists_from_nested_dict(d):
     collected_items = []
@@ -50,7 +51,17 @@ def reaction_has_duplicate_species(k_rxn):
     reactant_list, product_list = find_kinetiscope_reactants_and_products(k_rxn)
     reactants_are_duplicates = len(reactant_list) == 2 and are_species_duplicates(reactant_list)
     products_are_duplicates = len(product_list) == 2 and are_species_duplicates(product_list)
+    # if not products_are_duplicates and len(product_list) == 2:
+    #     print(product_list)
     return reactants_are_duplicates or products_are_duplicates
+
+def modify_kinetiscope_name(k_rxn, species_list, side_identifier):
+    index = 0 if side_identifier == "reactants" else 1
+    k_rxn_name = k_rxn.kinetiscope_name
+    old_rxn_name = k_rxn_name.split("=>")
+    old_rxn_name[index] = " + ".join(species_list)
+    new_rxn_name = " =>".join(old_rxn_name)
+    return new_rxn_name
 
 def star_test(species_list):
     for species in species_list:
@@ -58,27 +69,66 @@ def star_test(species_list):
             return True
     return False
 
+def replace_second_star_reactant(reactant_list):
+    reactant_list[1] = reactant_list[1].replace("*", "")
+    return reactant_list
+
+def replace_species_with_2_species(species_list):
+    species = species_list[0]
+    two_species = "2" + species
+    return two_species
+
 def correct_kinetiscope_name(k_rxn):
     reactant_list, product_list = find_kinetiscope_reactants_and_products(k_rxn)
     reactants_are_duplicates = len(reactant_list) == 2 and are_species_duplicates(reactant_list)
-    if reactants_are_duplicates: #TODO account for non=star test
+    if reactants_are_duplicates:
         if star_test(reactant_list):
-            reactant_list[1] = reactant_list[1].replace("*", "")
-            k_rxn_name = k_rxn.kinetiscope_name
-            old_rxn_name = k_rxn_name.split("=>")
-            old_rxn_name[0] = " + ".join(reactant_list)
-            new_rxn_name = " =>".join(old_rxn_name)
-            return new_rxn_name
+            reactant_list = replace_second_star_reactant(reactant_list)
+        else:
+            reactant_list = [replace_species_with_2_species(reactant_list)]
+        k_rxn.kinetiscope_name = modify_kinetiscope_name(k_rxn, reactant_list, "reactants")
     products_are_duplicates = len(product_list) == 2 and are_species_duplicates(product_list)
-    if products_are_duplicates: #are there seriously no reactions with duplicate products?...
-        print(product_list)
-        print("finally fired")
-        sys.exit()
-#builds expected number of ionization reactions
+    if products_are_duplicates: #should be true at least once for full
+        reactant_list = [replace_species_with_2_species(product_list)]
+        k_rxn.kinetiscope_name = modify_kinetiscope_name(k_rxn, product_list, "products")
+    return k_rxn
 
+def order_kinetiscope_reactions(kinetiscope_reactions, supercategory_order, supercategories_with_subcategories, subcategory_order):
+    def get_supercategory_index(reaction):
+        for i, supercategory in enumerate(supercategory_order):
+            if supercategory in reaction.marker_species:
+                return i
+        # Return a large number if no supercategory is found
+        return len(supercategory_order)
+
+    def get_subcategory_index(reaction):
+        # Check if the reaction's supercategory has subcategories
+        for supercategory in supercategory_order:
+            if supercategory in reaction.marker_species and supercategory in supercategories_with_subcategories:
+                for i, subcategory in enumerate(subcategory_order):
+                    if subcategory in reaction.marker_species:
+                        return i
+        # Return a large number if no subcategory is found
+        return len(subcategory_order)
+
+    # Sort first by supercategory, then by subcategory
+    ordered_reactions = sorted(
+        kinetiscope_reactions,
+        key=lambda reaction: (get_supercategory_index(reaction), get_subcategory_index(reaction))
+    )
+    
+    return ordered_reactions
+
+def shorten_PCET(reaction):
+    reaction.kinetiscope_name = reaction.kinetiscope_name.replace("proton_coupled_electron_transfer", "PCET")
+    return reaction
 kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
-HiPRGen_reaction_list = loadfn("HiPRGen_rxns_to_name.json")
+test_rxns = "HiPRGen_rxns_to_name.json"
+HiPRGen_reaction_list = loadfn(test_rxns)
+# full_rxns = "HiPRGen_rxns_to_name_full.json"
+# HiPRGen_reaction_list = loadfn(full_rxns)
+# name_mpculeid_file = "name_test_mpculeid_080624.json"
 name_mpculeid_file = "name_test_mpculeid_080624.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
 mpculeid_name_dict = {mpculeid: name for name, mpculeid in name_mpculeid_dict.items()}
@@ -147,38 +197,93 @@ for H_rxn in chemical_reaction_list:
         kinetiscope_reaction_list.append(reaction)
 
 
-for reaction in kinetiscope_reaction_list:
+for index, reaction in enumerate(kinetiscope_reaction_list):
     if reaction_has_duplicate_species(reaction):
-        reaction.kinetiscope_name = correct_kinetiscope_name(reaction)
+        kinetiscope_reaction_list[index] = correct_kinetiscope_name(reaction)
+        
+    if "proton_coupled_electron_transfer" in reaction.marker_species:
+        kinetiscope_reaction_list[index] = shorten_PCET(reaction)
 
-def count_kinetiscope_names(kinetiscope_reaction_list):
-    """
-    Counts the number of occurrences of each kinetiscope_name in the list of reactions.
+supercategory_order = [
+    "absorption", "electron_ionization", "recombination", "attachment", "excitation",
+    "dexcitation", "fragmentation", "isomerization", "ion-ion", "ion-molecule", "neutral"]
+
+supercategories_with_subcategories = set(["ion-ion", "ion-molecule", "neutral"])
+
+subcategory_order = [
+    "proton_transfer", "H_atom_abstraction", "hydride_abstraction", 
+    "proton_coupled_electron_transfer", "electron_transfer", "reaction"
+    ]
     
-    Args:
-        kinetiscope_reaction_list: A list of reaction objects with a `kinetiscope_name` attribute.
+ordered_reactions = order_kinetiscope_reactions(
+    kinetiscope_reaction_list, 
+    supercategory_order, 
+    supercategories_with_subcategories, 
+    subcategory_order
+)
+
+# dumpfn(ordered_reactions, "ordered_kinetiscope_reactions.json")
+
+print('Writing reactions to csv file...')
+# with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
+    # reader = csv.reader(csvfile)
+    # fields = list(next(reader))
+
+dict_list = []
+
+for reaction in ordered_reactions:
+    rate_coefficient_format = 3 if "absorption" in reaction.marker_species else 0
+    csv_dict = {}
+    csv_dict['# equation'] = reaction.kinetiscope_name
+    csv_dict['fwd_A'] = 1
+    csv_dict['fwd_temp_coeff'] = 0
+    csv_dict['fwd_Ea'] = 0
+    csv_dict['fwd_k'] = reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
+    csv_dict['rev_A'] = 1
+    csv_dict['rev_temp_coeff'] = 0
+    csv_dict['rev_Ea'] = 0
+    csv_dict['rev_k'] = 1
+    csv_dict['fwd_k0'] = 1
+    csv_dict['rev_k0'] = 1
+    csv_dict['alpha_alv'] = 0.5
+    csv_dict['equil_potential'] = 0.5
+    csv_dict['num_electrons'] = 0
+    csv_dict['fwd_prog_k'] = reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
+    csv_dict['rev_prog_k'] = 1
+    csv_dict['non_stoichiometric'] = 0
+    csv_dict['rate_constant_format'] = rate_coefficient_format
+    dict_list.append(csv_dict)
+
+# os.chdir(new_dir)
+    
+with open("euvl_testset_reactions.csv", 'w', newline = "") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
+    writer.writeheader()
+    for reaction in dict_list:
+        writer.writerow(reaction)
+  
+print('Done!') 
+    
+#         A dictionary with kinetiscope_names as keys and their counts as values.
+#     """
+#     # Dictionary to store the count of each kinetiscope_name
+#     name_counts = {}
+
+#     # Iterate over the list of reactions
+#     for reaction in kinetiscope_reaction_list:
+#         # Retrieve kinetiscope_name
+#         kinetiscope_name = reaction.kinetiscope_name
         
-    Returns:
-        A dictionary with kinetiscope_names as keys and their counts as values.
-    """
-    # Dictionary to store the count of each kinetiscope_name
-    name_counts = {}
+#         # Update the count in the dictionary
+#         if kinetiscope_name in name_counts:
+#             name_counts[kinetiscope_name] += 1
+#         else:
+#             name_counts[kinetiscope_name] = 1
 
-    # Iterate over the list of reactions
-    for reaction in kinetiscope_reaction_list:
-        # Retrieve kinetiscope_name
-        kinetiscope_name = reaction.kinetiscope_name
-        
-        # Update the count in the dictionary
-        if kinetiscope_name in name_counts:
-            name_counts[kinetiscope_name] += 1
-        else:
-            name_counts[kinetiscope_name] = 1
+#     for name, count in name_counts.items():
+#         if count > 1:
+#             print(f"{name}: {count}")
 
-    for name, count in name_counts.items():
-        if count > 1:
-            print(f"{name}: {count}")
-
-counts = count_kinetiscope_names(kinetiscope_reaction_list)
-dumpfn(kinetiscope_reaction_list, "kinetiscope_reaction_list.json")
+# counts = count_kinetiscope_names(kinetiscope_reaction_list)
+# dumpfn(kinetiscope_reaction_list, "kinetiscope_full_reaction_list.json")
         

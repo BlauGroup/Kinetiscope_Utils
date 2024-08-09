@@ -24,6 +24,7 @@ def build_ionization_reactions(H_reaction, mpculeid_dict, rate_constant_key, rat
 
 def build_light_ionization(H_reaction, mpculeid_dict, rate_constant_dict):
     added_products =  H_reaction.classification_list[:-1] # does not include tag
+    added_products.append("eV_80")
     absorber = H_reaction.reactants[0]
     return build_ionization_reactions(H_reaction, mpculeid_dict, absorber, rate_constant_dict, "absorption", 1, None, added_products)
 
@@ -32,7 +33,7 @@ def build_electron_ionization_reactions(H_reaction, mpculeid_dict, rate_constant
     reactant_product_dict = {
         "eV_80": ["eV_55", "LEE"],
         "eV_55": ["eV_30", "LEE"],
-        "eV_30": ["2LEE"]
+        "eV_30": ["2 LEE"]
                             }
     for reactant, product_list in reactant_product_dict.items():
         product_list = H_reaction.classification_list[:-1] + product_list
