@@ -122,25 +122,26 @@ def order_kinetiscope_reactions(kinetiscope_reactions, supercategory_order, supe
 def shorten_PCET(reaction):
     reaction.kinetiscope_name = reaction.kinetiscope_name.replace("proton_coupled_electron_transfer", "PCET")
     return reaction
+
 kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
-test_rxns = "HiPRGen_rxns_to_name.json"
-HiPRGen_reaction_list = loadfn(test_rxns)
-# full_rxns = "HiPRGen_rxns_to_name_full.json"
-# HiPRGen_reaction_list = loadfn(full_rxns)
+# test_rxns = "HiPRGen_rxns_to_name.json"
+# HiPRGen_reaction_list = loadfn(test_rxns)
+full_rxns = "HiPRGen_rxns_to_name_full.json"
+HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
-name_mpculeid_file = "name_test_mpculeid_080624.json"
+name_mpculeid_file = "name_full_mpculeid_080624.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
 mpculeid_name_dict = {mpculeid: name for name, mpculeid in name_mpculeid_dict.items()}
 
 rate_constant_dict = { #values calculated in excel and taken as scientific notation values
     "ionization":
         {"absorption":{
-            "0aade5ee5263fd1ad77490688fb37d0e-C10H20O2-0-1":1.4e-01,
-            "1d64d1a96b5db50b9fdf583dc18f90cf-C10H14O1-0-1":1.0e-01,
-            "94be97269b03e361ba1b344f48f19e44-C18H15S1-1-1":1.8e-01,
-            "f357352f5dd5488b54d50242d228ed6d-C4F9O3S1-m1-1":5.8e-01},
-            # "4-CNBZ":1.5E-01},
+            "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4e-01,
+            "00a7dcc352b0d613f58e850935bf5609-C10H14O1-0-1":1.0e-01,
+            "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1":1.8e-01,
+            "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1":5.8e-01,
+            "17f31f89123edbaa0e3b9c7eb49d26f3-C8H4N1O2-m1-1":1.5E-01},
          "electron_ionization":{
              "eV_80":1.4e+15,
              "eV_55":1.2e+15,
@@ -153,8 +154,8 @@ rate_constant_dict = { #values calculated in excel and taken as scientific notat
              "neutral":3.1e+12}
          },
     "chemical":
-        {"2nd_order":6.2e+12,
-         "1st_order":1.3e+12}
+        {"1st_order":6.2e+12,
+         "2nd_order":1.3e+12}
         }
     
 marker_species_shorthand = {
@@ -256,7 +257,7 @@ for reaction in ordered_reactions:
 
 # os.chdir(new_dir)
     
-with open("euvl_testset_reactions.csv", 'w', newline = "") as csvfile:
+with open("euvl_full_reactions.csv", 'w', newline = "") as csvfile:
     writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
     writer.writeheader()
     for reaction in dict_list:
