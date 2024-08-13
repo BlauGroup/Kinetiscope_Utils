@@ -44,7 +44,7 @@ def write_excitation_reaction_name(reactant):
 
 def build_dexcitation_reaction(H_rxn, dexcitation_reaction_name, rate_constant_dict, reaction_list):
     de_order = 1
-    de_rate_constant = rate_constant_dict["chemical"].get("1st_order", None)
+    de_rate_constant = 2.0E+06
     de_species = ["dexcitation"]
     dexcitation_reaction_name = dexcitation_reaction_name + " + dexcitation"
     dexcitation_reaction = build_rxn_object(H_rxn, dexcitation_reaction_name, de_rate_constant, de_order, de_species)
