@@ -17,6 +17,7 @@ handle_phase1_chemical_reactions,
 handle_phase2_chemical_reactions
 )
 import csv
+import re
 
 def collect_lists_from_nested_dict(d):
     collected_items = []
@@ -54,11 +55,14 @@ def reaction_has_duplicate_species(k_rxn):
     return reactants_are_duplicates or products_are_duplicates
 
 def modify_kinetiscope_name(k_rxn, species_list, side_identifier):
-    sides = k_rxn.kinetiscope_name.split("=>")
+    # Normalize whitespace around "=>"
+    sides = re.split(r'\s*=>\s*', k_rxn.kinetiscope_name)
+    
     if side_identifier == "reactants":
         sides[0] = " + ".join(species_list)
     else:
         sides[1] = " + ".join(species_list)
+
     return " => ".join(sides)
 
 # def star_test(species_list):
@@ -171,7 +175,7 @@ os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
 full_rxns = "HiPRGen_rxns_to_name_full.json"
 HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
-name_mpculeid_file = "name_full_mpculeid_080624.json"
+name_mpculeid_file = "name_full_mpculeid_corrected_081324.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
 mpculeid_name_dict = {mpculeid: name for name, mpculeid in name_mpculeid_dict.items()}
 
@@ -242,70 +246,118 @@ for H_rxn in chemical_reaction_list:
 for index, reaction in enumerate(kinetiscope_reaction_list):
     if reaction_has_duplicate_species(reaction):
         kinetiscope_reaction_list[index] = correct_kinetiscope_name(reaction)
-        print(reaction.kinetiscope_name)
         
     if "proton_coupled_electron_transfer" in reaction.marker_species:
         kinetiscope_reaction_list[index] = shorten_PCET(reaction)
 
-# supercategory_order = [
-#     "absorption", "electron_ionization", "recombination", "attachment", "excitation",
-#     "dexcitation", "fragmentation", "isomerization", "ion-ion", "ion-molecule", "neutral"]
 
-# supercategories_with_subcategories = set(["ion-ion", "ion-molecule", "neutral"])
+for kinetiscope_reaction in kinetiscope_reaction_list:
+    split_name = kinetiscope_reaction.kinetiscope_name.split()
+    try:
+        for species in split_name:
+            assert len(species) <= 32
+    except:
+        print("a chemical name is too many characters!")
+        print(f"this was the problem name: {species}")
+        raise AssertionError
+        
+supercategory_order = [
+    "absorption", "electron_ionization", "recombination", "attachment", "excitation",
+    "dexcitation", "fragmentation", "isomerization", "ion-ion", "ion-molecule", "neutral"]
 
-# subcategory_order = [
-#     "proton_transfer", "H_atom_abstraction", "hydride_abstraction", 
-#     "proton_coupled_electron_transfer", "electron_transfer", "reaction"
-#     ]
+supercategories_with_subcategories = set(["ion-ion", "ion-molecule", "neutral"])
+
+subcategory_order = [
+    "proton_transfer", "H_atom_abstraction", "hydride_abstraction", 
+    "proton_coupled_electron_transfer", "electron_transfer", "reaction"
+    ]
     
-# ordered_reactions = order_kinetiscope_reactions(
-#     kinetiscope_reaction_list, 
-#     supercategory_order, 
-#     supercategories_with_subcategories, 
-#     subcategory_order
-# )
+ordered_reactions = order_kinetiscope_reactions(
+    kinetiscope_reaction_list, 
+    supercategory_order, 
+    supercategories_with_subcategories, 
+    subcategory_order
+)
 
-# dumpfn(ordered_reactions, "ordered_kinetiscope_reactions.json")
+class DuplicateReactionError(Exception):
+    """Custom exception for duplicate reactions."""
+    def __init__(self, name, count):
+        self.name = name
+        self.count = count
+        super().__init__(f"Duplicate reaction found: '{name}' appears {count} times.")
 
-# print('Writing reactions to csv file...')
-# # with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
-#     # reader = csv.reader(csvfile)
-#     # fields = list(next(reader))
+def remove_duplicate_reactions(kinetiscope_reaction_list):
+    new_list = []
+    name_set = set()
+    for reaction in kinetiscope_reaction_list:
+        if reaction.kinetiscope_name not in name_set:
+            new_list.append(reaction)
+            name_set.add(reaction.kinetiscope_name)
+    return new_list
 
-# dict_list = []
-
-# for reaction in ordered_reactions:
-#     rate_coefficient_format = 3 if "absorption" in reaction.marker_species else 0
-#     csv_dict = {}
-#     csv_dict['# equation'] = reaction.kinetiscope_name
-#     csv_dict['fwd_A'] = 1
-#     csv_dict['fwd_temp_coeff'] = 0
-#     csv_dict['fwd_Ea'] = 0
-#     csv_dict['fwd_k'] = reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
-#     csv_dict['rev_A'] = 1
-#     csv_dict['rev_temp_coeff'] = 0
-#     csv_dict['rev_Ea'] = 0
-#     csv_dict['rev_k'] = 1
-#     csv_dict['fwd_k0'] = 1
-#     csv_dict['rev_k0'] = 1
-#     csv_dict['alpha_alv'] = 0.5
-#     csv_dict['equil_potential'] = 0.5
-#     csv_dict['num_electrons'] = 0
-#     csv_dict['fwd_prog_k'] = reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
-#     csv_dict['rev_prog_k'] = 1
-#     csv_dict['non_stoichiometric'] = 0
-#     csv_dict['rate_constant_format'] = rate_coefficient_format
-#     dict_list.append(csv_dict)
-
-# # os.chdir(new_dir)
+def count_kinetiscope_names(kinetiscope_reaction_list):
+    name_counts = {}
+    for reaction in kinetiscope_reaction_list:
+        kinetiscope_name = reaction.kinetiscope_name
+        
+        if kinetiscope_name in name_counts:
+            name_counts[kinetiscope_name] += 1
+        else:
+            name_counts[kinetiscope_name] = 1
     
-# with open("euvl_full_reactions.csv", 'w', newline = "") as csvfile:
-#     writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
-#     writer.writeheader()
-#     for reaction in dict_list:
-#         writer.writerow(reaction)
+        # Check for duplicates and raise an error if any are found
+        for name, count in name_counts.items():
+            if count > 1:
+                raise DuplicateReactionError(name, count)
+
+# Example usage:
+try:
+    kinetiscope_reaction_list = remove_duplicate_reactions(kinetiscope_reaction_list)
+    count_kinetiscope_names(kinetiscope_reaction_list)
+except DuplicateReactionError as e:
+    print(f"Error: {e}")
+
+dumpfn(ordered_reactions, "ordered_kinetiscope_reactions.json")
+
+print('Writing reactions to csv file...')
+# with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
+    # reader = csv.reader(csvfile)
+    # fields = list(next(reader))
+
+dict_list = []
+
+for reaction in ordered_reactions:
+    rate_coefficient_format = 3 if "absorption" in reaction.marker_species else 0
+    csv_dict = {}
+    csv_dict['# equation'] = reaction.kinetiscope_name
+    csv_dict['fwd_A'] = 1
+    csv_dict['fwd_temp_coeff'] = 0
+    csv_dict['fwd_Ea'] = 0
+    csv_dict['fwd_k'] = reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
+    csv_dict['rev_A'] = 1
+    csv_dict['rev_temp_coeff'] = 0
+    csv_dict['rev_Ea'] = 0
+    csv_dict['rev_k'] = 1
+    csv_dict['fwd_k0'] = 1
+    csv_dict['rev_k0'] = 1
+    csv_dict['alpha_alv'] = 0.5
+    csv_dict['equil_potential'] = 0.5
+    csv_dict['num_electrons'] = 0
+    csv_dict['fwd_prog_k'] = reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
+    csv_dict['rev_prog_k'] = 1
+    csv_dict['non_stoichiometric'] = 0
+    csv_dict['rate_constant_format'] = rate_coefficient_format
+    dict_list.append(csv_dict)
+
+# os.chdir(new_dir)
+    
+with open("euvl_full_reactions_corrected_081324.csv", 'w', newline = "") as csvfile:
+    writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
+    writer.writeheader()
+    for reaction in dict_list:
+        writer.writerow(reaction)
   
-# print('Done!') 
+print('Done!') 
     
 #         A dictionary with kinetiscope_names as keys and their counts as values.
 #     """
