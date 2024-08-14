@@ -414,3 +414,5 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
         name_mpcule_dict.pop(test_name)
         
     name_mpcule_dict[new_stereos[-1]] = mpculeid
+    
+#TODO make this generate the json and test to see if all names are <32 chars
