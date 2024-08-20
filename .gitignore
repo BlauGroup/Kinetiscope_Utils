@@ -9,3 +9,8 @@ shortest_tree_analysis.py
 old_junk
 update_name_mpculeid_file.py
 write_kinetiscope_rxns.py
+Kinetiscope_rxn_classes.py
+build_name_mpculeid_json.py
+create_mol_json.py
+Kinetiscope_rxn_class.py
+write_kinetiscope_rxns.py
