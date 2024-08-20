@@ -441,13 +441,11 @@ for mol_entry in mol_entries:
         name_mpcule_dict[species_name] = mpcule_id
         stereo_dict[species_name] = [species_name]
         
-    try:
-        assert len(species_name) <33
-        
-    except AssertionError:
+    if len(species_name) >= 33: #names in kinetiscope are limited to 32 chars
         
         print(f"Generated species name is too long! {species_name}")
         print(f"Length of name is: {len(species_name)}")
+        print("consider changing the names of functional groups to be shorter")
         print("Aborting")
         sys.exit()
         
@@ -455,13 +453,11 @@ for mol_entry in mol_entries:
 print("Done!")
 
 number_named = len(name_mpcule_dict)
-
 total_num_names = len(name_mpcule_dict)
 
-try:
-    assert number_named == number_to_name
-except AssertionError:
-    print("Failed to name the correct numnber of species")
+if number_named != number_to_name:
+    
+    print("Failed to name the correct number of species")
     print(f"Expected number of names: {number_to_name}")
     print(f"Actual number of names generated: {number_named}" )
     print("Aborting")
