@@ -5,7 +5,7 @@ Created on Sat Jan 27 13:40:39 2024
 @author: jacob
 """
 
-__version__ = '1.0.0'
+__version__ = '1.0.2'
 
 from monty.json import MSONable
 
@@ -47,7 +47,7 @@ class HiPRGen_Reaction(MSONable):
             tag=d.get("tag")
         )
     
-class Kinetiscope_Reaction(MSONable):
+class Kinetiscope_Reaction(MSONable): #TODO rename this to better represent what it is
     def __init__(self, HiPRGen_rxn, kinetiscope_name, rate_coefficient, order, marker_species):
         self.HiPRGen_rxn = HiPRGen_rxn
         self.kinetiscope_name = kinetiscope_name
@@ -84,3 +84,50 @@ class Kinetiscope_Reaction(MSONable):
                 f"rate_coefficient={self.rate_coefficient}, "
                 f"reaction_order={self.reaction_order}, "
                 f"marker_species={self.marker_species})")
+    
+class Kinetiscope_simulation_reaction(MSONable): #TODO be able to call this from upper directory
+    def __init__(self, kinetiscope_name, kinetiscope_index, selection_freq):
+        self.kinetiscope_name = kinetiscope_name
+        self.kinetiscope_index = kinetiscope_index
+        self.selection_freq = selection_freq
+        self.reactants = self.find_reactants()
+        self.products = self.find_products()
+    
+    def find_reactants(self):
+        return self.find_species(0)
+
+    def find_products(self):
+        return self.find_species(1)
+    
+    def find_species(self, index):
+        unsorted_species = self.find_both_sides()[index]
+        unsorted_species_list = unsorted_species.split(" + ")
+        sorted_species = sorted(species.strip() for species in unsorted_species_list)
+        return sorted_species
+    
+    def find_both_sides(self):
+        return self.kinetiscope_name.split( "=> ")
+    
+    def as_dict(self):
+        return {
+            "@module": self.__class__.__module__,
+            "@class": self.__class__.__name__,
+            "kinetiscope_name": self.kinetiscope_name,
+            "kinetiscope_index": self.kinetiscope_index,
+            "reactants": self.reactants,
+            "products": self.products,
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        return cls(
+            kinetiscope_name=d["kinetiscope_name"],
+            kinetiscope_index=d["kinetiscope_index"]
+        )
+    
+    def __str__(self):
+        return (f"Kinetiscope Simulation Reaction:\n"
+                f"  Kinetiscope Name: {self.kinetiscope_name}\n"
+                f"  Kinetiscope Index: {self.kinetiscope_index}\n"
+                f"  Reactants: {self.reactants}\n"
+                f"  Products: {self.products}")
