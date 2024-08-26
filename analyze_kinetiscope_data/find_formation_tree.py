@@ -119,6 +119,14 @@ def find_most_selected_pathway(product, highest_select_dict, starting_species):
     for prefix in prefixes:
         pathway = prefix + pathway
     return pathway
+
+def save_reaction_info_to_file(chemical_name, reactions):
+    filename = f"{chemical_name}.txt"
+    with open(filename, 'w') as file:
+        for rxn in reactions:
+            file.write(f"{rxn.kinetiscope_name}: {rxn.selection_freq}\n")
+    print(f"Reaction information saved to {filename}")
+
               
 kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\full_simulations_081224"
 corrected_path = os.path.normpath(kinetiscope_files_dir)
@@ -151,14 +159,12 @@ while True:
         print("Exiting the script.")
         break
     
-    test = find_most_selected_pathway(chemical_name, highest_select_dict, starting_species)
-    for rxn in test:
-        print(rxn.kinetiscope_name)
-        print(rxn.selection_freq)
-    # Check if the chemical name is in the dictionary
-    # if chemical_name in chemical_dict:
-    #     print(f"The mpculeid for {chemical_name} is {chemical_dict[chemical_name]}.")
-    # else:
-    #     print(f"Error: {chemical_name} not found in the dictionary.")
+    try:
+        test = find_most_selected_pathway(chemical_name, highest_select_dict, starting_species)
+        
+        save_reaction_info_to_file(chemical_name, test)
+        
+    except KeyError:
+        print("That isn't a product!")
         
 
