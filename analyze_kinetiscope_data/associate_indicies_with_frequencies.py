@@ -5,6 +5,12 @@ Created on Tue Aug 27 11:26:28 2024
 @author: jacob
 """
 
+"""
+This script defines a function (build_index_freq_dict) that processes a text 
+file of indexed reactions and generates a dictionary mapping each reaction 
+index to its selection frequency at the end of the simulation.
+"""
+
 def extract_numbers_from_line(line):
     """
     Extracts integer numbers from a line of text.

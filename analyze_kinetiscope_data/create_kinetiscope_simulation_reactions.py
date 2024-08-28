@@ -9,6 +9,14 @@ import sys
 sys.path.append('../common')
 from Rxn_classes import Kinetiscope_simulation_reaction
 
+"""
+This script defines a function, build_index_reaction_dict, that creates a 
+dictionary linking each reaction's index in a kinetiscope simulation to a 
+Kinetiscope_simulation_reaction object, a class defined in Rxn_classes. Each 
+object includes the reaction's name, a string identifier from the file, its 
+index, and its selection frequency
+"""
+
 def remove_whitespace(name_with_whitespace):
     """
     Removes leading and trailing whitespace from a string.

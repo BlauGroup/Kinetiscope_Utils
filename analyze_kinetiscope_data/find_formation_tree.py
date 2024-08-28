@@ -9,6 +9,13 @@ from utilities import correct_path_change_dir
 from build_top_reaction_dict import find_top_formation_reactions
 import os
 
+"""
+This script uses the Pathfinding class's method from HiPRGen to find reaction 
+pathways leading to the formation of a specific species in our simulations. It 
+follows the highest-frequency reactions that form the species and recursively 
+searches for the reactants of each reaction.
+"""
+
 def find_reactant_pathways(highest_frequency_reaction, highest_select_dict, starting_species):
     """
     Finds and returns the pathways for each reactant of a given reaction by 

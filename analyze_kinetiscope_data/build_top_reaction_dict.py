@@ -8,6 +8,12 @@ Created on Tue Aug 27 13:29:27 2024
 from associate_indicies_with_frequencies import build_index_freq_dict
 from create_kinetiscope_simulation_reactions import build_index_reaction_dict
 
+"""
+This script defines a function, find_top_formation_reactions, that creates a 
+dictionary linking each species' chemical name in the simulations to the 
+reaction where it is a product with the highest selection frequency.
+"""
+
 def should_update_reaction(top_formation_reaction, product, reaction):
     """
     Determines if a reaction should be updated in the top reactions dictionary.
