@@ -15,3 +15,4 @@ create_mol_json.py
 Kinetiscope_rxn_class.py
 write_kinetiscope_rxns.py
 misc_old_junk/
+build_kinetiscope_files/write_kinetiscope_ionization_reactions.py
