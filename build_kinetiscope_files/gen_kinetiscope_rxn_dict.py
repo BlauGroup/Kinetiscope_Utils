@@ -7,15 +7,15 @@ Created on Fri May 24 11:54:29 2024
 __version__ = '1.1.0'
 
 import os
-import sys
+# import sys
 from monty.serialization import loadfn, dumpfn
 from kinetiscope_reaction_writing_utilities import ReactionDataStorage
-from write_kinetiscope_ionization_reactions import handle_ionization_reactions
-from write_kinetiscope_chemical_reactions import (
-handle_phase1_chemical_reactions,
-handle_phase2_chemical_reactions
-)
-import csv
+from select_ionization_builder import select_ionization_builder
+# from write_kinetiscope_chemical_reactions import (
+# handle_phase1_chemical_reactions,
+# handle_phase2_chemical_reactions
+# )
+# import csv
 import re
 
 def collect_lists_from_nested_dict(d):
@@ -176,7 +176,6 @@ HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
 name_mpculeid_file = "name_full_mpculeid_080624.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
-# mpculeid_name_dict = {mpculeid: name for name, mpculeid in name_mpculeid_dict.items()}
 
 absorption_rate_constants = {
     "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4e-01,
@@ -185,8 +184,6 @@ absorption_rate_constants = {
     "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1":5.8e-01,
     "17f31f89123edbaa0e3b9c7eb49d26f3-C8H4N1O2-m1-1":1.5E-01
 }
-
-# rate_constant_dict = create_rate_constant_dict(absorption_rate_constants)
     
 marker_species_dict = {
     "radical_cation":"rc",
@@ -201,12 +198,15 @@ marker_species_dict = {
 excitation_set = set()
 
 reaction_writing_data = ReactionDataStorage(name_mpculeid_dict, marker_species_dict, excitation_set, absorption_rate_constants)
+HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
 
-for rxn_list in HiPRGen_reaction_list["ionization"].values():
+for rxn_list in HiPRGen_ionization_reactions:
     for HiPRGen_rxn in rxn_list:
         ionization_reaction_list = \
-            handle_ionization_reactions(HiPRGen_rxn, reaction_writing_data)
+            select_ionization_builder(HiPRGen_rxn, reaction_writing_data) #returns a list with one or more elements
         kinetiscope_reaction_list.extend(ionization_reaction_list)
+for k_rxn in kinetiscope_reaction_list:
+    print(k_rxn.kinetiscope_name)
 
 # chemical_reaction_list = collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
 
