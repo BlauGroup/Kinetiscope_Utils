@@ -16,3 +16,5 @@ Kinetiscope_rxn_class.py
 write_kinetiscope_rxns.py
 misc_old_junk/
 build_kinetiscope_files/write_kinetiscope_ionization_reactions.py
+build_kinetiscope_files/select_chemical_builderpy.py
+build_kinetiscope_files/write_kinetiscope_chemical_reactions.py

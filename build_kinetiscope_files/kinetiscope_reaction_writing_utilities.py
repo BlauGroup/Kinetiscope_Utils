@@ -135,14 +135,10 @@ class ReactionDataStorage:
 
         return rate_constant_dict
 
-# def build_reaction_parameter_dict(rate_constant_key, superclass, reaction_order, reactants_to_add=None, products_to_add=None):
-#     reaction_parameter_dict = {
-#         "rate_constant_key":rate_constant_key,
-#         "superclass":superclass,
-#         "reaction_order":reaction_order,
-#         "reactants_to_add":reactants_to_add,
-#         "products_to_add":products_to_add}
-#     return reaction_parameter_dict
+def determine_ordinal_number_order(H_rxn):
+    if len(H_rxn.reactants) == 1:
+        return "1st_order"
+    return "2nd_order"
         
 def add_reactants(base_name, added_reactants):
     return " + ".join(added_reactants + [base_name])

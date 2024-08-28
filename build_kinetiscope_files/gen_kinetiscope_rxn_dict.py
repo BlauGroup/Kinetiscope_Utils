@@ -11,6 +11,7 @@ import os
 from monty.serialization import loadfn, dumpfn
 from kinetiscope_reaction_writing_utilities import ReactionDataStorage
 from select_ionization_builder import select_ionization_builder
+from select_chemical_builder import select_chemical_builder
 # from write_kinetiscope_chemical_reactions import (
 # handle_phase1_chemical_reactions,
 # handle_phase2_chemical_reactions
@@ -63,21 +64,6 @@ def modify_kinetiscope_name(k_rxn, species_list, side_identifier):
         sides[1] = " + ".join(species_list)
     
     return " => ".join(sides)
-
-# def star_test(species_list):
-#     for species in species_list:
-#         if "*" in species:
-#             return True
-#     return False
-
-# def replace_second_star_reactant(reactant_list):
-#     reactant_list[1] = reactant_list[1].replace("*", "")
-#     return reactant_list
-
-# def replace_species_with_2_species(species_list):
-#     species = species_list[0]
-#     two_species = "2 " + species
-#     return two_species
 
 def replace_species_with_2_species(species_list):
     species = species_list[0]
@@ -198,27 +184,28 @@ marker_species_dict = {
 excitation_set = set()
 
 reaction_writing_data = ReactionDataStorage(name_mpculeid_dict, marker_species_dict, excitation_set, absorption_rate_constants)
-HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
+# HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
 
-for rxn_list in HiPRGen_ionization_reactions:
-    for HiPRGen_rxn in rxn_list:
-        ionization_reaction_list = \
-            select_ionization_builder(HiPRGen_rxn, reaction_writing_data) #returns a list with one or more elements
-        kinetiscope_reaction_list.extend(ionization_reaction_list)
-for k_rxn in kinetiscope_reaction_list:
-    print(k_rxn.kinetiscope_name)
+# for rxn_list in HiPRGen_ionization_reactions:
+#     for HiPRGen_rxn in rxn_list:
+#         ionization_reaction_list = \
+#             select_ionization_builder(HiPRGen_rxn, reaction_writing_data) #returns a list with one or more elements
+#         kinetiscope_reaction_list.extend(ionization_reaction_list)
 
-# chemical_reaction_list = collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
+chemical_reaction_list = collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
 
-# for H_rxn in chemical_reaction_list:
-#     if H_rxn.phase == 1:
-#         chemical_reaction_list, excitation_set = \
-#             handle_phase1_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand, excitation_set)
-#         kinetiscope_reaction_list.extend(chemical_reaction_list)
-#     else:
-#         reaction = handle_phase2_chemical_reactions(H_rxn, mpculeid_name_dict, rate_constant_dict, marker_species_shorthand)
-#         kinetiscope_reaction_list.append(reaction)
-
+for HiPRGen_rxn in chemical_reaction_list:
+    
+    if HiPRGen_rxn.phase == 1:
+    
+        chemical_reaction_list, reaction_writing_data = (
+            select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
+        )
+        
+        kinetiscope_reaction_list.extend(chemical_reaction_list)
+        
+for rxn in kinetiscope_reaction_list:
+    print(rxn.kinetiscope_name)
 
 # for index, reaction in enumerate(kinetiscope_reaction_list):
 #     if reaction_has_duplicate_species(reaction):
