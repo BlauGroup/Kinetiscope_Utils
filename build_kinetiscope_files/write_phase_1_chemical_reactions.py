@@ -455,6 +455,7 @@ def write_name_without_excitation(HiPRGen_rxn, reaction_writing_data):
 
     species_list = HiPRGen_rxn.classification_list[:]
     shorthand_dict = reaction_writing_data.marker_species_dict
+    mpculeid_dict = reaction_writing_data.mpculeid_dict
     
     shorthand_species = (
         replace_tag_with_shorthand(species_list, shorthand_dict)
@@ -464,7 +465,7 @@ def write_name_without_excitation(HiPRGen_rxn, reaction_writing_data):
     HiPRGen_name = HiPRGen_rxn.name
     
     kinetiscope_name = write_kinetiscope_name(
-        HiPRGen_name, shorthand_dict, added_reactants, shorthand_species
+        HiPRGen_name,  mpculeid_dict, added_reactants, shorthand_species
     )
         
     return kinetiscope_name
