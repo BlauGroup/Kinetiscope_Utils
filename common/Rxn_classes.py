@@ -85,7 +85,7 @@ class Kinetiscope_Reaction(MSONable): #TODO rename this to better represent what
                 f"reaction_order={self.reaction_order}, "
                 f"marker_species={self.marker_species})")
     
-class Kinetiscope_simulation_reaction(MSONable): #TODO be able to call this from upper directory
+class Kinetiscope_simulation_reaction(MSONable):
     def __init__(self, kinetiscope_name, kinetiscope_index, selection_freq):
         self.kinetiscope_name = kinetiscope_name
         self.kinetiscope_index = kinetiscope_index
