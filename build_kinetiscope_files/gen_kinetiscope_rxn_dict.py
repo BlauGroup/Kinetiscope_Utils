@@ -18,6 +18,20 @@ from correct_names_remove_duplicates import (
     shorten_PCET
 )
 
+"""
+This module uses a json associating mpculeids from HiPRGen with human-readable
+chemical names, as well as classified HiPRGen_reaction objects (Rxn_classes)
+generated in classify_HiPRGen_reactions to create Kinetiscope_reaction objects
+associated with each HiPRGen reaction.
+
+Tags based on reaction classifications--e.g. ion-molecule, proton transfer--
+will be added as reactants and/or products so we can monitor the production of
+marker species in kinetiscope. The module, after creating the reaction objects,
+orders them in a user-defined manner, which will be reflected upon import into
+kinetiscope, and finally saves information related to the reactions to a csv
+file which can be imported into kinetiscope.
+"""
+
 class DuplicateFileError(Exception):
     def __init__(self, filename):
         super().__init__(f"The file '{filename}' already exists.")
@@ -336,6 +350,105 @@ def order_kinetiscope_reactions(
     
     return ordered_reactions
 
+def create_ordered_reaction_list(ordered_reactions):
+    """
+    Each reaction, when we import it to kinetiscope, has a lot of information
+    and/or numbers associated with it, so we create a dictionary associated
+    with each reaction to write those numbers to the incipient excel file.
+
+    Parameters
+    ----------
+    ordered_reactions : list
+        list of reactions, which we have already ordered
+
+    Returns
+    -------
+    dict_list : list
+        list of dictionaries associated with each reaction. Has the same order
+        as ordered_reactions
+
+    """
+    
+    dict_list = []
+    
+    for reaction in ordered_reactions:
+        
+        csv_dict = {}
+        
+        rate_coefficient_format = (
+            3 if "absorption" in reaction.marker_species else 0
+        )
+        
+        csv_dict['# equation'] = reaction.kinetiscope_name
+        csv_dict['fwd_A'] = 1
+        csv_dict['fwd_temp_coeff'] = 0
+        csv_dict['fwd_Ea'] = 0
+        
+        csv_dict['fwd_k'] = (
+            reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
+        )
+        
+        csv_dict['rev_A'] = 1
+        csv_dict['rev_temp_coeff'] = 0
+        csv_dict['rev_Ea'] = 0
+        csv_dict['rev_k'] = 1
+        csv_dict['fwd_k0'] = 1
+        csv_dict['rev_k0'] = 1
+        csv_dict['alpha_alv'] = 0.5
+        csv_dict['equil_potential'] = 0.5
+        csv_dict['num_electrons'] = 0
+        
+        csv_dict['fwd_prog_k'] = (
+            reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
+        )
+        
+        csv_dict['rev_prog_k'] = 1
+        csv_dict['non_stoichiometric'] = 0
+        csv_dict['rate_constant_format'] = rate_coefficient_format
+        
+        dict_list.append(csv_dict)
+    
+    return dict_list
+
+def write_reactions_to_csv(new_filename, dict_list):
+    """
+    Writes a list of reaction dictionaries to a CSV file.
+    
+    The function first checks if a file with the given filename already exists
+    using the `check_and_raise_if_duplicate` function. If the file exists, it
+    raises a `DuplicateFileError` and exits the program. Otherwise, it writes
+    the reaction data to the CSV file, creating a new file with the specified
+    `new_filename`.
+    
+    Parameters:
+    - new_filename (str): The name of the file to write the CSV data to.
+    - dict_list (list of dict): A list of dictionaries, where each dictionary
+      represents a reaction and contains the data to be written to the CSV file.
+
+    Raises:
+    - DuplicateFileError: If a file with the same name already exists.
+    
+    Example:
+    ```
+    new_filename = 'reactions.csv'
+    dict_list = [{'# equation': 'H2 + O2 -> H2O', 'fwd_A': 1, ...}, ...]
+    write_reactions_to_csv(new_filename, dict_list)
+    ```
+    """
+    try:
+        check_and_raise_if_duplicate(new_filename)
+        print(f"The file '{new_filename}' does not exist. Safe to proceed.")
+    except DuplicateFileError as e:
+        print(e) 
+        sys.exit(1)
+    
+    with open(new_filename, 'w', newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=dict_list[0].keys())
+        writer.writeheader()
+        
+        for reaction in dict_list:
+            writer.writerow(reaction)
+
 kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
 # test_rxns = "HiPRGen_rxns_to_name.json"
@@ -366,6 +479,10 @@ marker_species_dict = {
 
 excitation_set = set()
 
+#we store this in a ReactionDataStorage object, described in 
+# kinetiscope_reaction_writing_utilities so that we can pass all of this stuff
+#as a single arguement to functions
+
 reaction_writing_data = ReactionDataStorage(
     name_mpculeid_dict,
     marker_species_dict,
@@ -378,11 +495,13 @@ HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
 #generate kinetiscope reactions for ionization reacctions
 
 for rxn_list in HiPRGen_ionization_reactions:
+    
     for HiPRGen_rxn in rxn_list:
+        
         ionization_reaction_list = \
             select_ionization_builder(HiPRGen_rxn, reaction_writing_data) 
             
-        #list has >=1 elements
+        #ionization_reaction has >=1 elements
         
         kinetiscope_reaction_list.extend(ionization_reaction_list)
 
@@ -398,7 +517,7 @@ for HiPRGen_rxn in chemical_reaction_list:
         select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
     )
     
-    #list has >=1 elements
+    #chemical_reaction_list has >=1 elements
     
     kinetiscope_reaction_list.extend(chemical_reaction_list)
 
@@ -461,60 +580,15 @@ ordered_reactions = order_kinetiscope_reactions(
 dumpfn(ordered_reactions, "ordered_kinetiscope_reactions.json")
 
 print('Writing reactions to csv file...')
-# with open('Kinetiscope_rxn_template.csv', newline = "") as csvfile:
-#     reader = csv.reader(csvfile)
-#     fields = list(next(reader))
 
-dict_list = []
+#create a dict associated with each reaction for easy saving
 
-for reaction in ordered_reactions:
-    
-    rate_coefficient_format = (
-        3 if "absorption" in reaction.marker_species else 0
-    )
-    
-    csv_dict = {}
-    csv_dict['# equation'] = reaction.kinetiscope_name
-    csv_dict['fwd_A'] = 1
-    csv_dict['fwd_temp_coeff'] = 0
-    csv_dict['fwd_Ea'] = 0
-    
-    csv_dict['fwd_k'] = (
-        reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
-    )
-    
-    csv_dict['rev_A'] = 1
-    csv_dict['rev_temp_coeff'] = 0
-    csv_dict['rev_Ea'] = 0
-    csv_dict['rev_k'] = 1
-    csv_dict['fwd_k0'] = 1
-    csv_dict['rev_k0'] = 1
-    csv_dict['alpha_alv'] = 0.5
-    csv_dict['equil_potential'] = 0.5
-    csv_dict['num_electrons'] = 0
-    
-    csv_dict['fwd_prog_k'] = (
-        reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
-    )
-    
-    csv_dict['rev_prog_k'] = 1
-    csv_dict['non_stoichiometric'] = 0
-    csv_dict['rate_constant_format'] = rate_coefficient_format
-    dict_list.append(csv_dict)
+dict_list = create_ordered_reaction_list(ordered_reactions)
 
 new_filename = "euvl_full_reactions_fixed_081324.csv"
 
-try:
-    check_and_raise_if_duplicate(new_filename)
-    print(f"The file '{new_filename}' does not exist. Safe to proceed.")
-except DuplicateFileError as e:
-    print(e) 
-    sys.exit(1)
-    
-with open(new_filename, 'w', newline = "") as csvfile:
-    writer = csv.DictWriter(csvfile, fieldnames = dict_list[0].keys())
-    writer.writeheader()
-    for reaction in dict_list:
-        writer.writerow(reaction)
+#write those reactions to a csv file, which can be imported into kinetiscope
+
+write_reactions_to_csv(new_filename, dict_list)
   
 print('Done!') 
