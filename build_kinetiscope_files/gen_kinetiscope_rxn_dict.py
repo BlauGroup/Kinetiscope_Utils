@@ -10,7 +10,12 @@ import os
 import sys
 import csv
 from monty.serialization import loadfn, dumpfn
-from kinetiscope_reaction_writing_utilities import ReactionDataStorage
+from kinetiscope_reaction_writing_utilities import (
+    ReactionDataStorage,
+    reclassify_crosslinking_reactions,
+    check_species_lengths,
+    check_reaction_count
+)
 from select_ionization_builder import select_ionization_builder
 from select_chemical_builder import select_chemical_builder
 from correct_names_remove_duplicates import (
@@ -33,36 +38,64 @@ file which can be imported into kinetiscope.
 """
 
 class DuplicateFileError(Exception):
+    """
+    Exception raised for errors related to duplicate files.
+
+    This exception is used when an operation encounters a file that already
+    exists when it is expected to be unique.
+
+    Attributes:
+    - filename (str): The name of the file that caused the exception.
+
+    Methods:
+    - __init__(filename): Initializes the exception with the file name.
+    """
+
     def __init__(self, filename):
+        """
+        Initializes the DuplicateFileError with a specific filename.
+
+        Parameters:
+        - filename (str): The name of the file that already exists.
+
+        The error message is constructed to indicate that the specified file
+        already exists. This message is passed to the base Exception class.
+        """
         super().__init__(f"The file '{filename}' already exists.")
         self.filename = filename
+
         
 class DuplicateReactionError(Exception):
-    """Custom exception for duplicate reactions."""
-    
+    """
+    Exception raised for errors related to duplicate reactions.
+
+    This exception is used when a reaction is found to be duplicated more
+    times than expected.
+
+    Attributes:
+    - name (str): The name of the duplicate reaction.
+    - count (int): The number of times the reaction was found to be duplicated.
+
+    Methods:
+    - __init__(name, count): Initializes the exception with the reaction name
+      and count of occurrences.
+    """
+
     def __init__(self, name, count):
-        
+        """
+        Initializes the DuplicateReactionError with the name of the reaction and
+        the count of its occurrences.
+
+        Parameters:
+        - name (str): The name of the reaction that is duplicated.
+        - count (int): The number of times the reaction appears.
+
+        The error message is constructed to indicate the reaction name and its
+        occurrence count. This message is passed to the base Exception class.
+        """
         self.name = name
         self.count = count
         super().__init__(f"Duplicate reaction found: '{name}' appears {count} times.")
-
-def check_and_raise_if_duplicate(filename):
-    """
-    Check if a file with the given name exists in the current directory.
-    Raises DuplicateFileError if the file already exists.
-
-    Parameters:
-    -----------
-    filename : str
-        The name of the file to check.
-
-    Raises:
-    -------
-    DuplicateFileError
-        If the file exists in the current directory.
-    """
-    if os.path.isfile(filename):
-        raise DuplicateFileError(filename)
 
 def remove_duplicate_reactions(kinetiscope_reaction_list):
     """
@@ -350,7 +383,7 @@ def order_kinetiscope_reactions(
     
     return ordered_reactions
 
-def create_ordered_reaction_list(ordered_reactions):
+def create_list_for_csv(ordered_reactions):
     """
     Each reaction, when we import it to kinetiscope, has a lot of information
     and/or numbers associated with it, so we create a dictionary associated
@@ -410,7 +443,62 @@ def create_ordered_reaction_list(ordered_reactions):
     
     return dict_list
 
-def write_reactions_to_csv(new_filename, dict_list):
+def check_and_raise_if_duplicate(filename):
+    """
+    Check if a file with the given name exists in the current directory.
+    Raises DuplicateFileError if the file already exists.
+
+    Parameters:
+    -----------
+    filename : str
+        The name of the file to check.
+
+    Raises:
+    -------
+    DuplicateFileError
+        If the file exists in the current directory.
+    """
+    if os.path.isfile(filename):
+        raise DuplicateFileError(filename)
+        
+def write_reactions_to_json(dict_list, new_filename):
+    """
+    Writes a list of reaction dictionaries to a JSON file.
+
+    The function first checks if a file with the given filename already exists
+    using the `check_and_raise_if_duplicate` function. If the file exists, it
+    raises a `DuplicateFileError` and exits the program. Otherwise, it writes
+    the reaction data to the JSON file, creating a new file with the specified
+    `new_filename`.
+
+    Parameters:
+    - dict_list (list of dict): A list of dictionaries, where each dictionary
+      represents a reaction and contains the data to be written to the JSON 
+      file.
+    - new_filename (str): The name of the file to write the JSON data to.
+
+    Raises:
+    - DuplicateFileError: If a file with the same name already exists.
+
+    Example:
+    ```
+    dict_list = [{'equation': 'H2 + O2 -> H2O', 'fwd_A': 1, ...}, ...]
+    new_filename = 'reactions.json'
+    write_reactions_to_json(dict_list, new_filename)
+    """
+    
+    try:
+        # Check if the file already exists
+        check_and_raise_if_duplicate(new_filename)
+        print(f"The file '{new_filename}' does not exist. Safe to proceed.")
+        
+    except DuplicateFileError as e:
+        print(e)
+        sys.exit(1)
+
+    dumpfn(dict_list, new_filename)
+
+def write_reactions_to_csv(dict_list, new_filename):
     """
     Writes a list of reaction dictionaries to a CSV file.
     
@@ -421,27 +509,31 @@ def write_reactions_to_csv(new_filename, dict_list):
     `new_filename`.
     
     Parameters:
-    - new_filename (str): The name of the file to write the CSV data to.
     - dict_list (list of dict): A list of dictionaries, where each dictionary
       represents a reaction and contains the data to be written to the CSV file.
+    - new_filename (str): The name of the file to write the CSV data to.
 
     Raises:
     - DuplicateFileError: If a file with the same name already exists.
     
     Example:
     ```
-    new_filename = 'reactions.csv'
     dict_list = [{'# equation': 'H2 + O2 -> H2O', 'fwd_A': 1, ...}, ...]
-    write_reactions_to_csv(new_filename, dict_list)
+    new_filename = 'reactions.csv'
+    write_reactions_to_csv(dict_list, new_filename)
     ```
     """
+    
     try:
+        # Check if the file already exists
         check_and_raise_if_duplicate(new_filename)
         print(f"The file '{new_filename}' does not exist. Safe to proceed.")
+        
     except DuplicateFileError as e:
-        print(e) 
+        print(e)
         sys.exit(1)
     
+    # Write the list of dictionaries to a CSV file
     with open(new_filename, 'w', newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=dict_list[0].keys())
         writer.writeheader()
@@ -456,8 +548,10 @@ os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
 full_rxns = "HiPRGen_rxns_to_name_full.json"
 HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
-name_mpculeid_file = "name_full_mpculeid_080624.json"
+name_mpculeid_file = "name_full_mpculeid_corrected_081324.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
+# for name in name_mpculeid_dict.keys():
+#     print(name)
 
 absorption_rate_constants = {
     "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4e-01,
@@ -509,7 +603,16 @@ chemical_reaction_list = (
     collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
 )
 
-#repeat for chemical reactions
+chemical_reaction_list = (
+    collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
+)
+
+#we need the kinetiscope names to do this, but just do it for the HiPRGen
+#reactions so we can write the names with these tags later
+
+reclassify_crosslinking_reactions(chemical_reaction_list, reaction_writing_data)
+
+# repeat for chemical reactions
 
 for HiPRGen_rxn in chemical_reaction_list:
     
@@ -554,8 +657,8 @@ except DuplicateReactionError as e:
         
 supercategory_order = [
     "absorption", "electron_ionization", "recombination", "attachment", 
-    "excitation","dexcitation", "fragmentation", "isomerization", "ion-ion", 
-    "ion-molecule", "neutral"
+    "excitation", "dexcitation", "crosslinking", "fragmentation", 
+    "isomerization", "ion-ion", "ion-molecule", "neutral"
 ]
 
 supercategories_with_subcategories = (
@@ -577,18 +680,25 @@ ordered_reactions = order_kinetiscope_reactions(
     subcategory_order
 )
 
-dumpfn(ordered_reactions, "ordered_kinetiscope_reactions.json")
+for reaction in ordered_reactions:
+    
+    check_species_lengths(reaction.kinetiscope_name)
+    check_reaction_count(reaction.kinetiscope_name)
+
+json_filename = "ordered_kinetiscope_reactions_083024.json"
+
+write_reactions_to_json(ordered_reactions, json_filename)
 
 print('Writing reactions to csv file...')
 
 #create a dict associated with each reaction for easy saving
 
-dict_list = create_ordered_reaction_list(ordered_reactions)
+list_for_csv = create_list_for_csv(ordered_reactions)
 
-new_filename = "euvl_full_reactions_fixed_081324.csv"
+new_csv_filename = "euvl_full_reactions_fixed_081324.csv"
 
 #write those reactions to a csv file, which can be imported into kinetiscope
 
-write_reactions_to_csv(new_filename, dict_list)
+write_reactions_to_csv(list_for_csv, new_csv_filename)
   
 print('Done!') 

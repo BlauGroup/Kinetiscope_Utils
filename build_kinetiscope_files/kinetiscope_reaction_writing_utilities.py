@@ -5,6 +5,7 @@ Created on Thu Aug  8 14:24:24 2024
 @author: jacob
 """
 
+import re
 import sys
 sys.path.append('../common')
 from Rxn_classes import Kinetiscope_Reaction
@@ -512,3 +513,176 @@ def build_ionization_reaction(HiPRGen_reaction, reaction_writing_data, reaction_
     )
     
     return ionization_reaction
+
+def reclassify_reaction(HiPRGen_reaction):
+    """
+    Reclassifies the reaction by updating its classification tag.
+    
+    Parameters:
+    - HiPRGen_reaction (object): The reaction object whose classification will
+    be updated.
+    
+    Process:
+    1. Retrieves the current classification tag.
+    2. Replaces "combination" with "crosslinking" in the tag.
+    3. Updates the reaction's classification list and tag.
+    
+    Returns:
+    - None
+    """
+
+    current_classifications = HiPRGen_reaction.classification_list
+    current_tag = current_classifications[-1]
+    new_tag = current_tag.replace("combination", "crosslinking")
+    current_classifications[-1] = new_tag
+    HiPRGen_reaction.tag = new_tag
+    
+def reaction_is_crosslinking(product_name):
+    """
+    Checks if the input string indicates a crosslinking reaction by verifying:
+    - The presence of both "PHS" and "pMMA" with any number following them.
+    - OR the presence of "PHS" or "pMMA" with a number greater than or equal to
+    2.
+
+    Parameters:
+    - product_name (str): The string to check for crosslinking indicators.
+
+    Returns:
+    - bool: True if the string meets either of the conditions, False otherwise.
+    """
+
+    # Pattern for both "PHS" and "pMMA" with any number
+    both_backbones_pattern = r"PHS\d*.*pMMA\d*|pMMA\d*.*PHS\d*"
+
+    # Pattern for "PHS" or "pMMA" with number >= 2
+    two_same_backbone_pattern = r"(PHS[2-9]\d*|pMMA[2-9]\d*)"
+
+    contains_both_backbones = re.search(both_backbones_pattern, product_name)
+
+    contains_two_same = re.search(two_same_backbone_pattern, product_name)
+
+    return contains_both_backbones or contains_two_same
+
+def reclassify_if_crosslinking(HiPRGen_reaction, reaction_writing_data):
+    """
+    Reclassifies the reaction if it is identified as crosslinking.
+    
+    Parameters:
+    - HiPRGen_reaction (object): The reaction object with product details.
+    - reaction_writing_data (object): Contains the dictionary mapping product
+    IDs to names.
+    
+    Process:
+    1. Retrieves the product name from the dictionary.
+    2. Raises a KeyError if the product ID is missing.
+    3. Reclassifies the reaction if it is crosslinking.
+    
+    Raises:
+    - KeyError: If the mpculeid ID is not found in the dictionary.
+    
+    Returns:
+    - None
+    """
+    
+    product_mpculeid =  HiPRGen_reaction.products[0] #combination reactions 
+                                                     #have only one product
+    
+    product_name = (
+        reaction_writing_data.mpculeid_dict.get(product_mpculeid, None)
+    )
+    
+    if not product_name:
+        
+        raise KeyError(f"mpculeid {product_mpculeid} not in dictionary")
+        
+    if reaction_is_crosslinking(product_name):
+        
+        reclassify_reaction(HiPRGen_reaction)
+
+def reclassify_crosslinking_reactions(
+        HiPRGen_reaction_list, reaction_writing_data
+    ):
+    """
+    Reclassifies reactions in a list if they are identified as crosslinking.
+    
+    Parameters:
+    - HiPRGen_reaction_list (list): List of reaction objects to be checked and 
+    potentially reclassified.
+    - reaction_writing_data (object): Contains data for checking crosslinking, 
+    including a dictionary of molecule IDs.
+    
+    Process:
+    1. Iterates through each reaction in the list.
+    2. Checks if "combination" is in the reaction's classifications.
+    3. Reclassifies the reaction if it is crosslinking.
+    
+    Returns:
+    - None
+    """
+
+    for index, HiPRGen_reaction in enumerate(HiPRGen_reaction_list):
+
+        current_classifications = HiPRGen_reaction.classification_list
+
+        if "combination" in current_classifications:
+
+            reclassify_if_crosslinking(HiPRGen_reaction, reaction_writing_data)
+    
+def check_species_lengths(kinetiscope_reaction):
+    """
+    Processes the input string to ensure that each element of the resulting
+    list is less than or equal to 32 characters long. Raises an error if 
+    anyelement exceeds this length.
+    
+    Parameters:
+    - input_string (str): The string to be processed. Whitespace is removed,
+    and the string is split into a list of non-whitespace elements.
+    
+    Raises:
+    - ValueError: If any element in the list is longer than 32 characters.
+    
+    Returns:
+    - None
+    """
+    
+    # Remove any extra whitespace and split the string into a list of words
+    species_list = kinetiscope_reaction.split()
+    
+    # Check the length of each word and raise an error if it's too long
+    for species_name in species_list:
+        if len(species_name) > 32:
+            raise ValueError(f"{species_name} has {len(species_name)} chars.")
+
+def check_reaction_count(reaction_string):
+    """
+    Checks if the number of reactants and products in the reaction string is
+    less than 9. Raises an error if there are more than 8 reactants or products.
+    
+    Parameters:
+    - reaction_string (str): The reaction string to be checked. It should be 
+    in the format 'reactant1 + reactant2 + ... => product1 + product2 + ...'.
+    
+    Raises:
+    - ValueError: If there are more than 8 reactants or products.
+    
+    Returns:
+    - None
+    """
+    
+    try:
+        
+        reactants, products = reaction_string.split(" => ")
+        
+    except ValueError:
+        
+        raise ValueError("Reaction string must contain exactly one ' => ' separator.")
+    
+    # Split reactants and products into lists
+    reactants_list = reactants.split(" + ")
+    products_list = products.split(" + ")
+    
+    # Check if the number of reactants or products exceeds 8
+    if len(reactants_list) > 8:
+        raise ValueError("Number of reactants exceeds 8.")
+    if len(products_list) > 8:
+        raise ValueError("Number of products exceeds 8.")
