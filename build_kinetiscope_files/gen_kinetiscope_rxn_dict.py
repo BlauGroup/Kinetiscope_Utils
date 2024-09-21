@@ -542,13 +542,13 @@ def write_reactions_to_csv(dict_list, new_filename):
             writer.writerow(reaction)
 
 kinetiscope_reaction_list = []
-os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
+os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
 # test_rxns = "HiPRGen_rxns_to_name.json"
 # HiPRGen_reaction_list = loadfn(test_rxns)
-full_rxns = "HiPRGen_rxns_to_name_full.json"
+full_rxns = "HiPRGen_rxns_to_name_full_092124.json"
 HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
-name_mpculeid_file = "name_full_mpculeid_corrected_081324.json"
+name_mpculeid_file = "name_full_mpculeid_092124.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
 # for name in name_mpculeid_dict.keys():
 #     print(name)
@@ -685,7 +685,7 @@ for reaction in ordered_reactions:
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
 
-json_filename = "ordered_kinetiscope_reactions_083024.json"
+json_filename = "ordered_withexcitation_kinetiscope_reactions_092124.json"
 
 write_reactions_to_json(ordered_reactions, json_filename)
 
@@ -695,7 +695,7 @@ print('Writing reactions to csv file...')
 
 list_for_csv = create_list_for_csv(ordered_reactions)
 
-new_csv_filename = "euvl_full_reactions_fixed_081324.csv"
+new_csv_filename = "euvl_full_reactions_withexcitation_092124.csv"
 
 #write those reactions to a csv file, which can be imported into kinetiscope
 
