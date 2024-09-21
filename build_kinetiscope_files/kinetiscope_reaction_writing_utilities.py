@@ -552,10 +552,10 @@ def reaction_is_crosslinking(product_name):
     """
 
     # Pattern for both "PHS" and "pMMA" with any number
-    both_backbones_pattern = r"PHS\d*.*pMMA\d*|pMMA\d*.*PHS\d*"
+    both_backbones_pattern = r"PHSb\d*.*ptBMAb\d*|ptBMAb\d*.*PHSb\d*"
 
     # Pattern for "PHS" or "pMMA" with number >= 2
-    two_same_backbone_pattern = r"(PHS[2-9]\d*|pMMA[2-9]\d*)"
+    two_same_backbone_pattern = r"(PHSb[2-9]\d*|ptBMAb[2-9]\d*)"
 
     contains_both_backbones = re.search(both_backbones_pattern, product_name)
 
@@ -597,6 +597,7 @@ def reclassify_if_crosslinking(HiPRGen_reaction, reaction_writing_data):
         
     if reaction_is_crosslinking(product_name):
         
+        print("fired correctly")
         reclassify_reaction(HiPRGen_reaction)
 
 def reclassify_crosslinking_reactions(
