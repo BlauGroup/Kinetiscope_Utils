@@ -401,18 +401,28 @@ order_list = ["PtBMAb", "PHSb", "TPS", "phol", "ester", "COOH", "COO"]
 func_group_dict = reorder_dict_keys(func_group_dict, order_list)
 
 pickle_directory = \
-    "C:/Users/JRMilton/Kinetiscope_Utils/name_molecules"
+    "C:/Users/jacob/Kinetiscope_Utils/name_molecules"
     
 os.chdir(pickle_directory)
 
 #Note: the pickle file needs to be in the same folder as HiPRGen for the 
-#mol_entry objects to be loaded
+#mol_entry objects to be loaded. Also need to make sure to use the pickle file
+#for phase 2, because the file from phase 1 will cause an error, presumably
+#due to the presence of the "electron species"
 
 print('Loading mol_entries.pickle...')
 
 with open('mol_entries.pickle', 'rb') as f: #loads HiPRGen mol_entry objs
         
-    mol_entries = pickle.load(f)
+    try:
+        
+        mol_entries = pickle.load(f)
+    
+    except AttributeError:
+        
+        print("Need to use the pickle file from phase 2, not phase 1")
+        print("The 'electron species' in phase 1 causes issues here")
+        sys.exit()
     
 print('Done!')
 
