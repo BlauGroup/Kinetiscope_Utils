@@ -271,7 +271,7 @@ def add_excitation_reaction(HiPRGen_rxn, reaction_writing_data, excitation_name,
     order = 2
     
     rate_constant = (
-        reaction_writing_data.rate_constant_dict["chemical"].get("2nd_order", None)
+        reaction_writing_data.rate_constant_dict["ionization"]["electron_ionization"].get("LEE", None)
     )
     
     marker_species = ["excitation"]
