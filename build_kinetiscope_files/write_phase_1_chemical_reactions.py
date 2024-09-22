@@ -169,7 +169,9 @@ def write_dexcitation_reaction_name(excitation_reaction_name, reactant_name):
     
     dexcitation_list.reverse()
     
-    return " => ".join(dexcitation_list)
+    name_without_marker = " => ".join(dexcitation_list)
+    
+    return name_without_marker + " + dexcitation"
 
 def add_dexcitation_reaction(excitation_name, reactant, HiPRGen_rxn, reaction_writing_data, reaction_list):
     """
