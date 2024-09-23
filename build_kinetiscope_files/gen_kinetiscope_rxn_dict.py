@@ -616,13 +616,15 @@ reclassify_crosslinking_reactions(chemical_reaction_list, reaction_writing_data)
 
 for HiPRGen_rxn in chemical_reaction_list:
     
-    chemical_reaction_list, reaction_writing_data = (
-        select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
-    )
+    if HiPRGen_rxn.phase == 1:
     
-    #chemical_reaction_list has >=1 elements
-    
-    kinetiscope_reaction_list.extend(chemical_reaction_list)
+        chemical_reaction_list, reaction_writing_data = (
+            select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
+        )
+        
+        #chemical_reaction_list has >=1 elements
+        
+        kinetiscope_reaction_list.extend(chemical_reaction_list)
 
 #correct names of reactions when they contain duplicate species and a marker
 #species that is way too long
@@ -685,7 +687,7 @@ for reaction in ordered_reactions:
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
 
-json_filename = "ordered_withexcitation_kinetiscope_reactions_092124.json"
+json_filename = "phase1_import_test_092324.json"
 
 write_reactions_to_json(ordered_reactions, json_filename)
 
@@ -695,7 +697,7 @@ print('Writing reactions to csv file...')
 
 list_for_csv = create_list_for_csv(ordered_reactions)
 
-new_csv_filename = "euvl_full_reactions_withexcitation_092124.csv"
+new_csv_filename = "phase1_import_test_092324.csv"
 
 #write those reactions to a csv file, which can be imported into kinetiscope
 
