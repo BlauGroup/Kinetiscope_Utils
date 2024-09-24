@@ -422,13 +422,13 @@ def create_list_for_csv(ordered_reactions):
         )
         
         csv_dict['rev_A'] = 1
-        csv_dict['rev_temp_coeff'] = 0
+        csv_dict['rev_M'] = 0
         csv_dict['rev_Ea'] = 0
         csv_dict['rev_k'] = 1
         csv_dict['fwd_k0'] = 1
         csv_dict['rev_k0'] = 1
-        csv_dict['alpha_alv'] = 0.5
-        csv_dict['equil_potential'] = 0.5
+        csv_dict['alpha_val'] = 0.5
+        csv_dict['equil_potential'] = 0
         csv_dict['num_electrons'] = 0
         
         csv_dict['fwd_prog_k'] = (
@@ -554,10 +554,10 @@ name_mpculeid_dict = loadfn(name_mpculeid_file)
 #     print(name)
 
 absorption_rate_constants = {
-    "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4e-01,
-    "00a7dcc352b0d613f58e850935bf5609-C10H14O1-0-1":1.0e-01,
-    "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1":1.8e-01,
-    "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1":5.8e-01,
+    "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4E-01,
+    "00a7dcc352b0d613f58e850935bf5609-C10H14O1-0-1":1.0E-01,
+    "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1":1.8E-01,
+    "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1":5.8E-01,
     "17f31f89123edbaa0e3b9c7eb49d26f3-C8H4N1O2-m1-1":1.5E-01
 }
     
@@ -584,20 +584,20 @@ reaction_writing_data = ReactionDataStorage(
     absorption_rate_constants
 )
 
-# HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
+HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
 
-# #generate kinetiscope reactions for ionization reacctions
+#generate kinetiscope reactions for ionization reacctions
 
-# for rxn_list in HiPRGen_ionization_reactions:
+for rxn_list in HiPRGen_ionization_reactions:
     
-#     for HiPRGen_rxn in rxn_list:
+    for HiPRGen_rxn in rxn_list:
         
-#         ionization_reaction_list = \
-#             select_ionization_builder(HiPRGen_rxn, reaction_writing_data) 
+        ionization_reaction_list = \
+            select_ionization_builder(HiPRGen_rxn, reaction_writing_data) 
             
-#         #ionization_reaction has >=1 elements
+        #ionization_reaction has >=1 elements
         
-#         kinetiscope_reaction_list.extend(ionization_reaction_list)
+        kinetiscope_reaction_list.extend(ionization_reaction_list)
 
 chemical_reaction_list = (
     collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
@@ -615,16 +615,14 @@ reclassify_crosslinking_reactions(chemical_reaction_list, reaction_writing_data)
 # repeat for chemical reactions
 
 for HiPRGen_rxn in chemical_reaction_list:
+
+    chemical_reaction_list, reaction_writing_data = (
+        select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
+    )
     
-    if HiPRGen_rxn.phase == 2:
+    #chemical_reaction_list has >=1 elements
     
-        chemical_reaction_list, reaction_writing_data = (
-            select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
-        )
-        
-        #chemical_reaction_list has >=1 elements
-        
-        kinetiscope_reaction_list.extend(chemical_reaction_list)
+    kinetiscope_reaction_list.extend(chemical_reaction_list)
 
 #correct names of reactions when they contain duplicate species and a marker
 #species that is way too long
@@ -686,8 +684,9 @@ for reaction in ordered_reactions:
     
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
-
-json_filename = "phase2_import_test_092324.json"
+    
+parent_filename = "corrected_titles_test"
+json_filename = parent_filename + ".json"
 
 write_reactions_to_json(ordered_reactions, json_filename)
 
@@ -697,7 +696,7 @@ print('Writing reactions to csv file...')
 
 list_for_csv = create_list_for_csv(ordered_reactions)
 
-new_csv_filename = "phase2_import_test_092324.csv"
+new_csv_filename = parent_filename + ".csv"
 
 #write those reactions to a csv file, which can be imported into kinetiscope
 
