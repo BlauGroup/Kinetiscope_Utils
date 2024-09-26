@@ -5,9 +5,11 @@ Created on Thu Aug 22 09:51:24 2024
 @author: jacob
 """
 
-from utilities import correct_path_change_dir
 from build_top_reaction_dict import find_top_formation_reactions
 import os
+import sys
+sys.path.append('../common')
+from utilities import correct_path_change_dir
 
 """
 This script uses the Pathfinding class's method from HiPRGen to find reaction 
@@ -133,7 +135,7 @@ def find_most_selected_pathway(product, highest_select_dict, starting_species):
         The most selected pathway for the given product.
     """
     
-    if product not in highest_select_dict:
+    if product not in highest_select_dict: #TODO make this not just quit--ask if the name is wrong
         raise KeyError("Product does not have a reaction with a nonzero selection frequency.")
     
     current_pathway = []
@@ -193,26 +195,26 @@ def save_pathway_to_file(chemical_name, reactions):
             
     print(f"Reaction information saved to {filename}")
              
-kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\full_simulations_081224"
+kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\production_simulations_092124"
 
 correct_path_change_dir(kinetiscope_files_dir)
 
-select_freq_file = "10^5_selection_freqs.txt"
-reaction_name_file="10^5_reaction_steps.txt"
+select_freq_file = "excitation_selection_freq_092524.txt"
+reaction_name_file= "excitation_reactions_092524.txt"
 
-top_reaction_dict        = find_top_formation_reactions(
+top_reaction_dict = find_top_formation_reactions(
     select_freq_file, 
-    reaction_name_file, 
+    reaction_name_file,
     start_index=7, 
-    end_index=1315
+    end_index=5384
 )
 
 starting_species = [
-    "COO_pMMA_t-butyl_0",
-    "SO3_C4F9_-1",
-    "phenyl3_S1_+1_#1",
+    "PtBMAb_COO_tbut_0",
+    "Nf_-1",
+    "TPS_H1_+1_#1",
     "COO_CN_C6H4_-1",
-    "PHS_CO_C5H5_0_#1"]
+    "PHSb_phol_0"]
 
 starting_species = set(starting_species)
 
@@ -225,5 +227,8 @@ while True:
         print("Exiting the script.")
         break
        
-    pathway = find_most_selected_pathway(chemical_name, top_reaction_dict, starting_species)
+    pathway = (
+        find_most_selected_pathway(chemical_name, top_reaction_dict, starting_species)
+    )
+    
     save_pathway_to_file(chemical_name, pathway)

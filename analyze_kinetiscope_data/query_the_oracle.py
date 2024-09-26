@@ -7,8 +7,8 @@ Created on Thu Aug 15 14:42:27 2024
 import os
 from monty.serialization import loadfn, dumpfn
 
-os.chdir("G:/My Drive/Kinetiscope/new_kinetiscope_naming_080224")
-chemical_dict = loadfn("name_full_mpculeid_corrected_081324.json")
+os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
+chemical_dict = loadfn("name_full_mpculeid_092124.json")
 
 while True:
     # Query user for a chemical name
