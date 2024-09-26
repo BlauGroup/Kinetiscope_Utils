@@ -16,6 +16,8 @@ import os
 import pickle
 import sys
 
+#TODO incorporate spin into names
+
 """
 
 This module takes the mol_entries.pickle file and generates a unique name 
