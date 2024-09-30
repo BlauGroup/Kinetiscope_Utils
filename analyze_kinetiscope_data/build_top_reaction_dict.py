@@ -7,6 +7,9 @@ Created on Tue Aug 27 13:29:27 2024
 
 from associate_indicies_with_frequencies import build_index_freq_dict
 from create_kinetiscope_simulation_reactions import build_index_reaction_dict
+import sys
+sys.path.append('../common')
+from utilities import correct_path_change_dir
 
 """
 This script defines a function, find_top_formation_reactions, that creates a 
@@ -112,3 +115,82 @@ def find_top_formation_reactions(select_freq_file, reaction_name_file, start_ind
     top_formation_reactions = build_top_reaction_dict(index_reaction_dict)
     
     return top_formation_reactions
+
+def build_top_reaction_dict_for_reactants(index_reaction_dict):
+    """
+    Builds a dictionary of top reactions for each reactant based on selection 
+    frequency.
+
+    Parameters
+    ----------
+    index_reaction_dict : dict
+        A dictionary where keys are reaction indices and values are reaction 
+        objects containing reactant information and selection frequencies.
+
+    Returns
+    -------
+
+    dict
+        A dictionary where keys are reactants and values are the reaction object 
+        with the highest selection frequency associated with that reactant.
+    """
+    
+    top_reactant_reactions = {}
+    
+    for reaction in index_reaction_dict.values():
+        reactants = reaction.reactants
+        for reactant in reactants:
+            if should_update_reaction(top_reactant_reactions, reactant, reaction):
+                top_reactant_reactions[reactant] = reaction
+
+    return top_reactant_reactions
+
+def find_top_reactant_reactions(select_freq_file, reaction_name_file, start_index, end_index):
+    """
+    Finds the top reactions for each reactant based on selection frequencies.
+    
+    Parameters
+    ----------
+    select_freq_file : str
+        The path to the file containing selection frequencies for reactions. 
+        This file is used to build a dictionary mapping reaction indices to 
+        their selection frequencies.
+    reaction_name_file : str
+        The path to the file containing reaction names and details. This file 
+        is used to build a dictionary mapping reaction indices to reaction 
+        objects.
+    start_index : int
+        The starting index for the range of lines to be considered in the 
+        selection frequencies file.
+    end_index : int
+        The ending index for the range of lines to be considered in the 
+        selection frequencies file.
+    
+    Returns
+    -------
+    dict
+        A dictionary where keys are reactants and values are the reaction object 
+        with the highest selection frequency associated with each reactant. This 
+        dictionary represents the top reactions for each reactant.
+    """
+    
+    index_freq_dict = (
+        build_index_freq_dict(select_freq_file, start_index, end_index)
+    )
+    
+    index_reaction_dict = (
+        build_index_reaction_dict(reaction_name_file, index_freq_dict)
+    )
+    
+    top_reactant_reactions = build_top_reaction_dict_for_reactants(index_reaction_dict)
+    
+    return top_reactant_reactions
+
+# if __name__ == "__main__":
+#     kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\production_simulations_092124"
+#     correct_path_change_dir(kinetiscope_files_dir)
+#     select_freq_file = "excitation_selection_freq_092524.txt"
+#     reaction_name_file= "excitation_reactions_092524.txt"
+#     top_reactant_dict = find_top_reactant_reactions(select_freq_file, reaction_name_file, start_index=7, 
+#     end_index=5384)
+#     print(top_reactant_dict["C4H8_0_#2"])
