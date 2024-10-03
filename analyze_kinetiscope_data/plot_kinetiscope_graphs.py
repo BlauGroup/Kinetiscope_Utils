@@ -155,7 +155,7 @@ def extract_time_concentrations(file_path):
     return time_concentration_dict
 
 
-def plot_concentrations(time_concentration_dict):
+def plot_concentrations(time_concentration_dict, save_path=None, dpi=300):
     """
     Plots the concentrations of chemical species over time using Matplotlib.
 
@@ -165,7 +165,7 @@ def plot_concentrations(time_concentration_dict):
                                      and their concentrations.
     """
     # Define colors for the top 5 species
-    top_colors = ['#57EAEB', '#57BCEB', '#2F5496', '#57EBB9', '#575EEB']
+    top_colors = ['#2F9696', '#2F7596', '#2F5496', '#2F3496', '#4B2F96']
     
     # Get the last time point and its concentrations
     last_time_point = max(time_concentration_dict.keys())
@@ -197,16 +197,20 @@ def plot_concentrations(time_concentration_dict):
     plt.title('Proton Transfer Reaction Dynamics')
     # plt.legend()  # Show legend
     plt.grid(True)  # Add grid for better readability
-
+    
+    if save_path:
+        plt.savefig(save_path, dpi=dpi, bbox_inches='tight')
     # Show the plot
     plt.show()
 
-
-kinetiscope_files_dir = (
-    r"G:\My Drive\Kinetiscope\production_simulations_092124"
-)
-
-correct_path_change_dir(kinetiscope_files_dir)
-conc_time_filepath = "proton_transfers_conc_vs_time_10^6_with_excitations.txt"
-time_concentration_dict = extract_time_concentrations(conc_time_filepath)
-plot_concentrations(time_concentration_dict)
+if __name__ == "__main__":
+    
+    kinetiscope_files_dir = (
+        r"G:\My Drive\Kinetiscope\production_simulations_092124"
+    )
+    
+    correct_path_change_dir(kinetiscope_files_dir)
+    conc_time_filepath = "proton_transfers_conc_vs_time_10^6_with_excitations.txt"
+    time_concentration_dict = extract_time_concentrations(conc_time_filepath)
+    plot_name = "proton_transfer_markers_093024.png"
+    plot_concentrations(time_concentration_dict, plot_name)
