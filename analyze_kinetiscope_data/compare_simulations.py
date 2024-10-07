@@ -28,7 +28,6 @@ def retain_last_entry(d):
 
 
 def convert_mols_to_particles(mol_dict):
-    # Define Avogadro's number
     particles_per_mol = 2.765e-17
 
     particle_dict = {
