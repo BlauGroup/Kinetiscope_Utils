@@ -653,8 +653,34 @@ try:
     
 except DuplicateReactionError as e:
     print(f"Error: {e}")
+
+
+barrierless_list = [
+    "absorption", "electron_ionization", "recombination", "attachment",
+    "excitation", "dexcitation", "fragmentation", "isomerization", "ion-ion",
+    "proton_transfer", "H_atom_abstraction", "hydride_abstraction",
+    "electron_transfer", "crosslinking", "combination"]
+
+print(f"length of reaction list before pruning: {len(kinetiscope_reaction_list)}")
+barrierless_reaction_list = []
+for reaction in kinetiscope_reaction_list:
+
+    reaction_is_barrierless = (
+        any(elem in reaction.marker_species for elem in barrierless_list)
+    )
+
+    if reaction_is_barrierless:
+        barrierless_reaction_list.append(reaction)
+    else:
+        try:
+            assert "reaction" in reaction.marker_species or "proton_coupled_electron_transfer" in reaction.marker_species
+        except:
+            print(reaction.marker_species)
+            sys.exit()
     
-        
+print(f"length of reaction list after pruning: {len(barrierless_reaction_list)}")
+sys.exit()
+
 supercategory_order = [
     "absorption", "electron_ionization", "recombination", "attachment", 
     "excitation", "dexcitation", "crosslinking", "fragmentation", 
@@ -670,9 +696,9 @@ subcategory_order = [
     "proton_coupled_electron_transfer", "electron_transfer", "reaction"
     ]
 
-#order reactions based on all of these categories, to later parse through our
-#excel file
-    
+# order reactions based on all of these categories, to later parse through our
+# excel file
+
 ordered_reactions = order_kinetiscope_reactions(
     kinetiscope_reaction_list, 
     supercategory_order, 
@@ -681,18 +707,18 @@ ordered_reactions = order_kinetiscope_reactions(
 )
 
 for reaction in ordered_reactions:
-    
+
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
-    
-parent_filename = "corrected_titles_test"
+
+parent_filename = "barrierless_only_101424"
 json_filename = parent_filename + ".json"
 
 write_reactions_to_json(ordered_reactions, json_filename)
 
 print('Writing reactions to csv file...')
 
-#create a dict associated with each reaction for easy saving
+# create a dict associated with each reaction for easy saving
 
 list_for_csv = create_list_for_csv(ordered_reactions)
 
