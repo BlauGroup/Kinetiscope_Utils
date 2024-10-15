@@ -37,6 +37,7 @@ kinetiscope, and finally saves information related to the reactions to a csv
 file which can be imported into kinetiscope.
 """
 
+
 class DuplicateFileError(Exception):
     """
     Exception raised for errors related to duplicate files.
@@ -64,7 +65,7 @@ class DuplicateFileError(Exception):
         super().__init__(f"The file '{filename}' already exists.")
         self.filename = filename
 
-        
+
 class DuplicateReactionError(Exception):
     """
     Exception raised for errors related to duplicate reactions.
@@ -83,8 +84,8 @@ class DuplicateReactionError(Exception):
 
     def __init__(self, name, count):
         """
-        Initializes the DuplicateReactionError with the name of the reaction and
-        the count of its occurrences.
+        Initializes the DuplicateReactionError with the name of the reaction
+        and the count of its occurrences.
 
         Parameters:
         - name (str): The name of the reaction that is duplicated.
@@ -95,88 +96,134 @@ class DuplicateReactionError(Exception):
         """
         self.name = name
         self.count = count
-        super().__init__(f"Duplicate reaction found: '{name}' appears {count} times.")
+        super().__init__(
+            f"Duplicate reaction found: '{name}' appears {count} times."
+        )
+
 
 def remove_duplicate_reactions(kinetiscope_reaction_list):
     """
     Remove duplicate Kinetiscope reactions from a list.
 
-    This function filters out duplicate reactions based on their 
-    `kinetiscope_name`. Only the first occurrence of each unique name 
+    This function filters out duplicate reactions based on their
+    `kinetiscope_name`. Only the first occurrence of each unique name
     is kept in the returned list.
 
     Parameters:
     -----------
     kinetiscope_reaction_list : list
-        A list of Kinetiscope reaction objects, each of which should have 
+        A list of Kinetiscope reaction objects, each of which should have
         a `kinetiscope_name` attribute.
 
     Returns:
     --------
     list
-        A new list containing only unique Kinetiscope reactions, with 
+        A new list containing only unique Kinetiscope reactions, with
         duplicates removed.
     """
 
     new_list = []
     name_set = set()
-    
+
     for reaction in kinetiscope_reaction_list:
         if reaction.kinetiscope_name not in name_set:
-            
+
             new_list.append(reaction)
             name_set.add(reaction.kinetiscope_name)
-            
+
     return new_list
+
 
 def count_kinetiscope_names(kinetiscope_reaction_list):
     """
     Count occurrences of each Kinetiscope reaction name in a list.
-    
-    This function tallies how many times each Kinetiscope reaction name 
-    appears in the provided list. If duplicates are found, a 
-    DuplicateReactionError is raised for each name with more than one 
+
+    This function tallies how many times each Kinetiscope reaction name
+    appears in the provided list. If duplicates are found, a
+    DuplicateReactionError is raised for each name with more than one
     occurrence.
-    
+
     Parameters:
     -----------
     kinetiscope_reaction_list : list
-        A list of Kinetiscope reaction objects, each of which should have 
+        A list of Kinetiscope reaction objects, each of which should have
         a `kinetiscope_name` attribute.
-    
+
     Raises:
     -------
     DuplicateReactionError
         If any Kinetiscope reaction name appears more than once in the list.
-    
+
     Returns:
     --------
     None
     """
-    
-    name_counts = {}
 
+    name_counts = {}
 
     for reaction in kinetiscope_reaction_list:
 
         kinetiscope_name = reaction.kinetiscope_name
-        
+
         if kinetiscope_name in name_counts:
-            
+
             name_counts[kinetiscope_name] += 1
-            
+
         else:
-            
+
             name_counts[kinetiscope_name] = 1
 
     # Check for duplicates and raise an error if any are found
-    
+
     for name, count in name_counts.items():
-        
+
         if count > 1:
-            
+
             raise DuplicateReactionError(name, count)
-            
+
+
+def remove_barriered_reactions(kinetiscope_reaction_list, barriered_markers):
+    """
+    Filters out reactions that contain barrier markers from the provided list
+    of reactions.
+
+    This function takes a list of reactions and checks each reaction's marker
+    species to determine if any markers associated with barriered reactions are
+    present. If a reaction contains one of the specified barrier markers, it is
+    excluded from the returned list. Only reactions that do not contain barrier
+    markers are retained.
+
+    Parameters:
+    -----------
+    kinetiscope_reaction_list : list
+        A list of reactions, where each reaction is expected to have a
+        'marker_species' attribute that contains species identifiers.
+
+    barriered_markers : set
+        A set of marker species identifiers associated with barriered
+        reactions.
+
+    Returns:
+    --------
+    barrierless_reactions : list
+        A list of reactions that do not contain any barrier markers.
+
+    """
+
+    barrierless_reactions = []
+    for reaction in kinetiscope_reaction_list:
+
+        has_barrier_marker = any(
+            elem in reaction.marker_species for elem in barriered_markers
+        )
+        reaction_is_barrierless = not has_barrier_marker
+
+        if reaction_is_barrierless:
+            barrierless_reactions.append(reaction)
+
+    return barrierless_reactions
+
+
 def collect_lists_from_nested_dict(d):
     """
     Collect all list items from a nested dictionary.
@@ -196,11 +243,12 @@ def collect_lists_from_nested_dict(d):
         A list containing all items collected from lists within the nested
         dictionary.
     """
-    
+
     collected_items = []
     recurse_through_dict(d, collected_items)
-    
+
     return collected_items
+
 
 def recurse_through_dict(d, collected_items):
     """
@@ -217,16 +265,17 @@ def recurse_through_dict(d, collected_items):
     collected_items : list
         The list to which items from nested lists are added.
     """
-    
+
     for value in d.values():
-        
+
         if isinstance(value, dict):
-            
+
             recurse_through_dict(value, collected_items)
-            
+
         elif isinstance(value, list):
-            
+
             collected_items.extend(value)
+
 
 def get_supercategory_index(reaction, supercategory_order):
     """
@@ -247,16 +296,17 @@ def get_supercategory_index(reaction, supercategory_order):
     int
         The index of the supercategory, or a large number if not found.
     """
-    
+
     for index, supercategory in enumerate(supercategory_order):
         if supercategory in reaction.marker_species:
-            
+
             return index
-        
+
     return len(supercategory_order)
 
+
 def get_subcategory_index(
-        reaction, supercategory_order, 
+        reaction, supercategory_order,
         supercategories_with_subcategories, subcategory_order
 ):
     """
@@ -283,34 +333,35 @@ def get_subcategory_index(
         The index of the subcategory, or a large number if not found.
     """
     for supercategory in supercategory_order:
-        
+
         supercategory_present = supercategory in reaction.marker_species
-        
+
         is_supercategory_with_subcategories = (
-        supercategory in supercategories_with_subcategories
+            supercategory in supercategories_with_subcategories
         )
-        
+
         if supercategory_present and is_supercategory_with_subcategories:
-            
+
             for index, subcategory in enumerate(subcategory_order):
                 if subcategory in reaction.marker_species:
-                    
+
                     return index
-                
+
     return len(subcategory_order)
 
+
 def get_sort_key(
-        reaction, supercategory_order, 
+        reaction, supercategory_order,
         supercategories_with_subcategories, subcategory_order
 ):
     """
-    Generate a sort key for a Kinetiscope reaction based on its supercategory 
+    Generate a sort key for a Kinetiscope reaction based on its supercategory
     and subcategory.
-    
-    This function calculates indices for both supercategory and subcategory 
-    of the reaction. These indices are used to sort reactions by their 
+
+    This function calculates indices for both supercategory and subcategory
+    of the reaction. These indices are used to sort reactions by their
     supercategory and subcategory in the specified orders.
-    
+
     Parameters:
     -----------
     reaction : object
@@ -321,36 +372,37 @@ def get_sort_key(
         A list of supercategories that include subcategories.
     subcategory_order : list
         A list specifying the order of subcategories.
-    
+
     Returns:
     --------
     tuple
-        A tuple containing the supercategory index and subcategory index 
+        A tuple containing the supercategory index and subcategory index
         used for sorting the reaction.
     """
     supercategory_index = (
         get_supercategory_index(reaction, supercategory_order)
     )
-    
+
     subcategory_index = get_subcategory_index(
-        reaction, 
-        supercategory_order, 
-        supercategories_with_subcategories, 
+        reaction,
+        supercategory_order,
+        supercategories_with_subcategories,
         subcategory_order
     )
-    
+
     return supercategory_index, subcategory_index
 
+
 def order_kinetiscope_reactions(
-    kinetiscope_reactions, supercategory_order, 
+    kinetiscope_reactions, supercategory_order,
     supercategories_with_subcategories, subcategory_order
 ):
     """
-    Sort a list of Kinetiscope reactions based on supercategory and 
+    Sort a list of Kinetiscope reactions based on supercategory and
     subcategory.
 
-    This function orders a list of Kinetiscope reactions first by 
-    supercategory and then by subcategory. The sorting is determined 
+    This function orders a list of Kinetiscope reactions first by
+    supercategory and then by subcategory. The sorting is determined
     using the provided orders for supercategories and subcategories.
 
     Parameters:
@@ -367,21 +419,93 @@ def order_kinetiscope_reactions(
     Returns:
     --------
     list
-        The list of Kinetiscope reactions, sorted by supercategory 
+        The list of Kinetiscope reactions, sorted by supercategory
         and subcategory.
     """
     # Sort the reactions using the key provided by get_sort_key
     ordered_reactions = sorted(
         kinetiscope_reactions,
         key=lambda reaction: get_sort_key(
-            reaction, 
-            supercategory_order, 
-            supercategories_with_subcategories, 
+            reaction,
+            supercategory_order,
+            supercategories_with_subcategories,
             subcategory_order
         )
     )
-    
+
     return ordered_reactions
+
+
+def build_csv_dict(reaction):
+    """
+    Instantiates a dictionary with default values for a reaction's CSV entry,
+    and sets specific values for absorption reactions.
+
+    Parameters
+    ----------
+    reaction : object
+        The reaction object for which the CSV dictionary is being built.
+
+    Returns
+    -------
+    csv_dict : dict
+        A dictionary populated with default values for the CSV output.
+    """
+
+    def set_absorption_values(csv_dict, reaction):
+        """
+        Sets the rate coefficient format and values for forward progression and
+        forward rate coefficient based on whether the reaction is an absorption
+        reaction.
+
+        Parameters
+        ----------
+        csv_dict : dict
+            The dictionary where the values will be set.
+
+        reaction : object
+            The reaction object being checked for absorption.
+
+        Returns
+        -------
+        None
+            The csv_dict is modified in-place.
+        """
+
+        if "absorption" in reaction.marker_species:
+
+            csv_dict['rate_constant_format'] = 3
+            csv_dict['fwd_prog_k'] = reaction.rate_coefficient
+            csv_dict['fwd_k'] = 1
+
+        else:
+            csv_dict['rate_constant_format'] = 0
+            csv_dict['fwd_prog_k'] = 1
+            csv_dict['fwd_k'] = reaction.rate_coefficient
+
+    csv_dict = {
+        '# equation': reaction.kinetiscope_name,
+        'fwd_A': 1,
+        'fwd_temp_coeff': 0,
+        'fwd_Ea': 0,
+        'rev_A': 1,
+        'rev_M': 0,
+        'rev_Ea': 0,
+        'rev_k': 1,
+        'fwd_k0': 1,
+        'rev_k0': 1,
+        'alpha_val': 0.5,
+        'equil_potential': 0,
+        'num_electrons': 0,
+        'rev_prog_k': 1,
+        'non_stoichiometric': 0,
+        'rate_constant_format': 0
+    }
+
+    set_absorption_values(csv_dict, reaction)
+
+    return csv_dict
+
 
 def create_list_for_csv(ordered_reactions):
     """
@@ -401,47 +525,15 @@ def create_list_for_csv(ordered_reactions):
         as ordered_reactions
 
     """
-    
+
     dict_list = []
-    
+
     for reaction in ordered_reactions:
-        
-        csv_dict = {}
-        
-        rate_coefficient_format = (
-            3 if "absorption" in reaction.marker_species else 0
-        )
-        
-        csv_dict['# equation'] = reaction.kinetiscope_name
-        csv_dict['fwd_A'] = 1
-        csv_dict['fwd_temp_coeff'] = 0
-        csv_dict['fwd_Ea'] = 0
-        
-        csv_dict['fwd_k'] = (
-            reaction.rate_coefficient if "absorption" not in reaction.marker_species else 1
-        )
-        
-        csv_dict['rev_A'] = 1
-        csv_dict['rev_M'] = 0
-        csv_dict['rev_Ea'] = 0
-        csv_dict['rev_k'] = 1
-        csv_dict['fwd_k0'] = 1
-        csv_dict['rev_k0'] = 1
-        csv_dict['alpha_val'] = 0.5
-        csv_dict['equil_potential'] = 0
-        csv_dict['num_electrons'] = 0
-        
-        csv_dict['fwd_prog_k'] = (
-            reaction.rate_coefficient if "absorption" in reaction.marker_species else 1
-        )
-        
-        csv_dict['rev_prog_k'] = 1
-        csv_dict['non_stoichiometric'] = 0
-        csv_dict['rate_constant_format'] = rate_coefficient_format
-        
-        dict_list.append(csv_dict)
-    
+
+        dict_list.append(build_csv_dict(reaction))
+
     return dict_list
+
 
 def check_and_raise_if_duplicate(filename):
     """
@@ -460,7 +552,8 @@ def check_and_raise_if_duplicate(filename):
     """
     if os.path.isfile(filename):
         raise DuplicateFileError(filename)
-        
+
+
 def write_reactions_to_json(dict_list, new_filename):
     """
     Writes a list of reaction dictionaries to a JSON file.
@@ -473,7 +566,7 @@ def write_reactions_to_json(dict_list, new_filename):
 
     Parameters:
     - dict_list (list of dict): A list of dictionaries, where each dictionary
-      represents a reaction and contains the data to be written to the JSON 
+      represents a reaction and contains the data to be written to the JSON
       file.
     - new_filename (str): The name of the file to write the JSON data to.
 
@@ -486,36 +579,38 @@ def write_reactions_to_json(dict_list, new_filename):
     new_filename = 'reactions.json'
     write_reactions_to_json(dict_list, new_filename)
     """
-    
+
     try:
         # Check if the file already exists
         check_and_raise_if_duplicate(new_filename)
         print(f"The file '{new_filename}' does not exist. Safe to proceed.")
-        
+
     except DuplicateFileError as e:
         print(e)
         sys.exit(1)
 
     dumpfn(dict_list, new_filename)
 
+
 def write_reactions_to_csv(dict_list, new_filename):
     """
     Writes a list of reaction dictionaries to a CSV file.
-    
+
     The function first checks if a file with the given filename already exists
     using the `check_and_raise_if_duplicate` function. If the file exists, it
     raises a `DuplicateFileError` and exits the program. Otherwise, it writes
     the reaction data to the CSV file, creating a new file with the specified
     `new_filename`.
-    
+
     Parameters:
     - dict_list (list of dict): A list of dictionaries, where each dictionary
-      represents a reaction and contains the data to be written to the CSV file.
+      represents a reaction and contains the data to be written to the CSV
+      file.
     - new_filename (str): The name of the file to write the CSV data to.
 
     Raises:
     - DuplicateFileError: If a file with the same name already exists.
-    
+
     Example:
     ```
     dict_list = [{'# equation': 'H2 + O2 -> H2O', 'fwd_A': 1, ...}, ...]
@@ -523,23 +618,24 @@ def write_reactions_to_csv(dict_list, new_filename):
     write_reactions_to_csv(dict_list, new_filename)
     ```
     """
-    
+
     try:
         # Check if the file already exists
         check_and_raise_if_duplicate(new_filename)
         print(f"The file '{new_filename}' does not exist. Safe to proceed.")
-        
+
     except DuplicateFileError as e:
         print(e)
         sys.exit(1)
-    
+
     # Write the list of dictionaries to a CSV file
     with open(new_filename, 'w', newline="") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=dict_list[0].keys())
         writer.writeheader()
-        
+
         for reaction in dict_list:
             writer.writerow(reaction)
+
 
 kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
@@ -554,28 +650,28 @@ name_mpculeid_dict = loadfn(name_mpculeid_file)
 #     print(name)
 
 absorption_rate_constants = {
-    "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1":1.4E-01,
-    "00a7dcc352b0d613f58e850935bf5609-C10H14O1-0-1":1.0E-01,
-    "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1":1.8E-01,
-    "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1":5.8E-01,
-    "17f31f89123edbaa0e3b9c7eb49d26f3-C8H4N1O2-m1-1":1.5E-01
+    "4864aee73a83d357c31fadd50b81e3cd-C10H20O2-0-1": 1.4E-01,
+    "00a7dcc352b0d613f58e850935bf5609-C10H14O1-0-1": 1.0E-01,
+    "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1": 1.8E-01,
+    "9a8a88b8b92c714d7f65b8526ffabc7a-C4F9O3S1-m1-1": 5.8E-01,
+    "17f31f89123edbaa0e3b9c7eb49d26f3-C8H4N1O2-m1-1": 1.5E-01
 }
-    
+
 marker_species_dict = {
-    "radical_cation":"rc",
-    "radical_anion":"ra",
-    "neutral_radical":"nr",
-    "cation":"c",
-    "anion":"a",
-    "neutral":"n",
-    "proton_coupled_electron_transfer":"PCET"
+    "radical_cation": "rc",
+    "radical_anion": "ra",
+    "neutral_radical": "nr",
+    "cation": "c",
+    "anion": "a",
+    "neutral": "n",
+    "proton_coupled_electron_transfer": "PCET"
 }
 
 excitation_set = set()
 
-#we store this in a ReactionDataStorage object, described in 
+# we store this in a ReactionDataStorage object, described in
 # kinetiscope_reaction_writing_utilities so that we can pass all of this stuff
-#as a single arguement to functions
+# as a single arguement to functions
 
 reaction_writing_data = ReactionDataStorage(
     name_mpculeid_dict,
@@ -586,17 +682,17 @@ reaction_writing_data = ReactionDataStorage(
 
 HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
 
-#generate kinetiscope reactions for ionization reacctions
+# generate kinetiscope reactions for ionization reacctions
 
 for rxn_list in HiPRGen_ionization_reactions:
-    
+
     for HiPRGen_rxn in rxn_list:
-        
+
         ionization_reaction_list = \
-            select_ionization_builder(HiPRGen_rxn, reaction_writing_data) 
-            
-        #ionization_reaction has >=1 elements
-        
+            select_ionization_builder(HiPRGen_rxn, reaction_writing_data)
+
+        # ionization_reaction has >=1 elements
+
         kinetiscope_reaction_list.extend(ionization_reaction_list)
 
 chemical_reaction_list = (
@@ -607,10 +703,12 @@ chemical_reaction_list = (
     collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
 )
 
-#we need the kinetiscope names to do this, but just do it for the HiPRGen
-#reactions so we can write the names with these tags later
+# we need the kinetiscope names to do this, but just do it for the HiPRGen
+# reactions so we can write the names with these tags later
 
-reclassify_crosslinking_reactions(chemical_reaction_list, reaction_writing_data)
+reclassify_crosslinking_reactions(
+    chemical_reaction_list, reaction_writing_data
+)
 
 # repeat for chemical reactions
 
@@ -619,71 +717,46 @@ for HiPRGen_rxn in chemical_reaction_list:
     chemical_reaction_list, reaction_writing_data = (
         select_chemical_builder(HiPRGen_rxn, reaction_writing_data)
     )
-    
-    #chemical_reaction_list has >=1 elements
-    
+
+    # chemical_reaction_list has >=1 elements
+
     kinetiscope_reaction_list.extend(chemical_reaction_list)
 
-#correct names of reactions when they contain duplicate species and a marker
-#species that is way too long
+# correct names of reactions when they contain duplicate species and a marker
+# species that is way too long
 
 for index, reaction in enumerate(kinetiscope_reaction_list):
-    
+
     reaction_has_duplicate_species, corrected_reaction = (
         validate_and_correct_reaction_name(reaction)
     )
-    
+
     if reaction_has_duplicate_species:
-        
+
         kinetiscope_reaction_list[index] = corrected_reaction
-        
+
     if "proton_coupled_electron_transfer" in reaction.marker_species:
-        
+
         kinetiscope_reaction_list[index] = shorten_PCET(reaction)
- 
-#make sure each reaction in the list is unique
-    
+
+# make sure each reaction in the list is unique
+
 try:
-    
+
     kinetiscope_reaction_list = (
         remove_duplicate_reactions(kinetiscope_reaction_list)
     )
-    
+
     count_kinetiscope_names(kinetiscope_reaction_list)
-    
+
 except DuplicateReactionError as e:
     print(f"Error: {e}")
 
-
-barrierless_list = [
-    "absorption", "electron_ionization", "recombination", "attachment",
-    "excitation", "dexcitation", "fragmentation", "isomerization", "ion-ion",
-    "proton_transfer", "H_atom_abstraction", "hydride_abstraction",
-    "electron_transfer", "crosslinking", "combination"]
-
-print(f"length of reaction list before pruning: {len(kinetiscope_reaction_list)}")
-barrierless_reaction_list = []
-for reaction in kinetiscope_reaction_list:
-
-    reaction_is_barrierless = (
-        any(elem in reaction.marker_species for elem in barrierless_list)
-    )
-
-    if reaction_is_barrierless:
-        barrierless_reaction_list.append(reaction)
-    else:
-        try:
-            assert "reaction" in reaction.marker_species or "proton_coupled_electron_transfer" in reaction.marker_species
-        except:
-            print(reaction.marker_species)
-            sys.exit()
-    
-print(f"length of reaction list after pruning: {len(barrierless_reaction_list)}")
-sys.exit()
+barrierless_reactions = remove_barriered_reactions(kinetiscope_reaction_list)
 
 supercategory_order = [
-    "absorption", "electron_ionization", "recombination", "attachment", 
-    "excitation", "dexcitation", "crosslinking", "fragmentation", 
+    "absorption", "electron_ionization", "recombination", "attachment",
+    "excitation", "dexcitation", "crosslinking", "fragmentation",
     "isomerization", "ion-ion", "ion-molecule", "neutral"
 ]
 
@@ -692,7 +765,7 @@ supercategories_with_subcategories = (
 )
 
 subcategory_order = [
-    "proton_transfer", "H_atom_abstraction", "hydride_abstraction", 
+    "proton_transfer", "H_atom_abstraction", "hydride_abstraction",
     "proton_coupled_electron_transfer", "electron_transfer", "reaction"
     ]
 
@@ -700,9 +773,9 @@ subcategory_order = [
 # excel file
 
 ordered_reactions = order_kinetiscope_reactions(
-    kinetiscope_reaction_list, 
-    supercategory_order, 
-    supercategories_with_subcategories, 
+    barrierless_reactions,
+    supercategory_order,
+    supercategories_with_subcategories,
     subcategory_order
 )
 
@@ -724,8 +797,8 @@ list_for_csv = create_list_for_csv(ordered_reactions)
 
 new_csv_filename = parent_filename + ".csv"
 
-#write those reactions to a csv file, which can be imported into kinetiscope
+# write those reactions to a csv file, which can be imported into kinetiscope
 
 write_reactions_to_csv(list_for_csv, new_csv_filename)
-  
-print('Done!') 
+
+print('Done!')
