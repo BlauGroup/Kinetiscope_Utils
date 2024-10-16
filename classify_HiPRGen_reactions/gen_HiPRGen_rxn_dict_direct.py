@@ -217,27 +217,27 @@ for product_dict in network_products.values():
                             rxn_dict, rxns_for_simulation, rxns_already_added
                         )
 
-# tagged_rxn_dict = {
-#     "ionization": {},
-#     "chemical": {
-#         "unimolecular": {
-#             "fragmentation": {},
-#             "isomerization": {}},
-#         "bimolecular": {
-#             "combination": {},
-#             "biproduct": {}
-#             }
-#         }
-#     }
+tagged_rxn_dict = {
+    "ionization": {},
+    "chemical": {
+        "unimolecular": {
+            "fragmentation": {},
+            "isomerization": {}},
+        "bimolecular": {
+            "combination": {},
+            "biproduct": {}
+            }
+        }
+    }
 
-# ionization_classifications = set(["positive_ionization", "electron_attachment",
-#                                   "electron_cation_recombination"])
-# tagged_rxn_dict = {}
+ionization_classifications = set(["positive_ionization", "electron_attachment",
+                                  "electron_cation_recombination"])
+tagged_rxn_dict = {}
 
-# for reaction in rxns_for_simulation:
+for reaction in rxns_for_simulation:
 
-#     reaction.classification_list = write_reaction_classification(reaction)
-#     add_reaction_to_dictionary(reaction, tagged_rxn_dict)
+    reaction.classification_list = write_reaction_classification(reaction)
+    add_reaction_to_dictionary(reaction, tagged_rxn_dict)
 
-# json_name = "HiPRGen_rxns_to_name_full_092124.json"
-# dumpfn(tagged_rxn_dict, json_name)
+json_name = "HiPRGen_rxns_to_name_full_101624.json"
+dumpfn(tagged_rxn_dict, json_name)

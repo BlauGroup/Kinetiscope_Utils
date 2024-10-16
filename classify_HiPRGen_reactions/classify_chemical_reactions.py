@@ -308,8 +308,9 @@ def classify_H(rxn):
     Determines whether a given reaction involves the transfer of a hydrogen
     atom by comparing the reactants of the reaction to the products. If a
     product has one more hydrogen atom than a reactant, the reaction is an H
-    atom transfer. Then, we narrow down the type via narrow_H_rxn_type and
-    return the specific type.
+    atom transfer. Then, we classify the type of hydrogen transfer via
+    narrow_H_rxn_type and return the specific type, prioritizing reactions
+    with fewer electrons transfered.
 
     Parameters
     ----------
@@ -319,22 +320,23 @@ def classify_H(rxn):
     Returns
     -------
     str
-        Narrowed H reaction type if the reaction is an H transfer,
-        an empty string otherwise. If multiple types of classifications are
-        possible, assigned based on the fewest possible number of electrons
-        transferred, with the following priority: proton_transfer >
+        The specific H atom transfer reaction type if found, or an empty
+        string if no classification matches. If multiple classifications
+        are possible, the reaction is prioritized based on proton_transfer >
         H_atom_abstraction > hydride_abstraction >
         proton_coupled_electron_transfer.
     """
+
     def classify_by_priority(possible_classifications):
         """
-        Selects the highest-priority classification from a list of possible
-        classifications based on a predefined hierarchy.
+        Sometimes, H reactions can be categorized in multiple ways. This
+        function selects the highest-priority classification from a list of
+        possible classifications based on a predefined hierarchy.
 
         Parameters
         ----------
         possible_classifications : list
-            A list of possible hydrogen transfer classifications.
+            A list of possible hydrogen atom transfer classifications.
 
         Returns
         -------
@@ -342,6 +344,7 @@ def classify_H(rxn):
             The highest-priority classification if found, otherwise an empty
             string.
         """
+
         classification_hierarchy = [
             "proton_transfer",
             "H_atom_abstraction",
@@ -351,27 +354,36 @@ def classify_H(rxn):
 
         for classification in classification_hierarchy:
             if classification in possible_classifications:
+
                 return classification
 
         return ""
 
+    def build_formula_dict(id_list):
+        """Creates a dictionary mapping IDs to their chemical formulas."""
+        return {mol_id: find_mpculeid_formula(mol_id) for mol_id in id_list}
+
+    def increase_hydrogens(formula_dict):
+        """
+        Returns a dictionary with the same keys, where each formula has
+        one more hydrogen atom.
+        """
+        return {mol_id: add_one_more_hydrogen(formula)
+                for mol_id, formula in formula_dict.items()}
+
     possible_classifications = []
 
-    for reactant_mpculeid in rxn.reactants:
-        reactant_formula = find_mpculeid_formula(reactant_mpculeid)
-        reactant_with_one_more_hydrogen = add_one_more_hydrogen(
-            reactant_formula
-        )
+    reactant_formula_dict = build_formula_dict(rxn.reactants)
+    reactants_with_extra_H = increase_hydrogens(reactant_formula_dict)
+    product_formula_dict = build_formula_dict(rxn.products)
 
-        for product_mpculeid in rxn.products:
-            product_formula = find_mpculeid_formula(product_mpculeid)
+    # Compare reactant formulas with extra hydrogen to product formulas
 
-            if product_formula == reactant_with_one_more_hydrogen:
+    for reactant_id, reactant_formula in reactants_with_extra_H.items():
+        for product_id, product_formula in product_formula_dict.items():
+            if reactant_formula == product_formula:
 
-                classification = narrow_H_rxn_type(
-                    reactant_mpculeid, product_mpculeid
-                )
-
+                classification = narrow_H_rxn_type(reactant_id, product_id)
                 possible_classifications.append(classification)
 
     return classify_by_priority(possible_classifications)
