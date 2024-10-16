@@ -308,7 +308,7 @@ def classify_H(rxn):
     Determines whether a given reaction involves the transfer of a hydrogen
     atom by comparing the reactants of the reaction to the products. If a
     product has one more hydrogen atom than a reactant, the reaction is an H
-    atom transfer.Then, we narrow down the type via narrow_H_rxn_type and
+    atom transfer. Then, we narrow down the type via narrow_H_rxn_type and
     return the specific type.
 
     Parameters
@@ -318,58 +318,63 @@ def classify_H(rxn):
 
     Returns
     -------
-    str or None
+    str
         Narrowed H reaction type if the reaction is an H transfer,
-        None otherwise.
+        an empty string otherwise. If multiple types of classifications are
+        possible, assigned based on the fewest possible number of electrons
+        transferred, with the following priority: proton_transfer >
+        H_atom_abstraction > hydride_abstraction >
+        proton_coupled_electron_transfer.
     """
-    def handle_multiple_classifications(possible_classifications):
-        # tested and possible_classifications is always len(2)
-        if possible_classifications[0] == possible_classifications[1]:
-            print("same classification")
-            return possible_classifications[0]
+    def classify_by_priority(possible_classifications):
+        """
+        Selects the highest-priority classification from a list of possible
+        classifications based on a predefined hierarchy.
 
+        Parameters
+        ----------
+        possible_classifications : list
+            A list of possible hydrogen transfer classifications.
+
+        Returns
+        -------
+        str
+            The highest-priority classification if found, otherwise an empty
+            string.
+        """
         classification_hierarchy = [
             "proton_transfer",
             "H_atom_abstraction",
             "hydride_abstraction",
-            "proton_coupled_electron_transfer"]
+            "proton_coupled_electron_transfer"
+        ]
 
         for classification in classification_hierarchy:
             if classification in possible_classifications:
-                print("different classifications")
                 return classification
+
+        return ""
 
     possible_classifications = []
 
     for reactant_mpculeid in rxn.reactants:
-
         reactant_formula = find_mpculeid_formula(reactant_mpculeid)
-
         reactant_with_one_more_hydrogen = add_one_more_hydrogen(
             reactant_formula
         )
 
         for product_mpculeid in rxn.products:
-
             product_formula = find_mpculeid_formula(product_mpculeid)
 
             if product_formula == reactant_with_one_more_hydrogen:
 
-                possible_classification = narrow_H_rxn_type(
+                classification = narrow_H_rxn_type(
                     reactant_mpculeid, product_mpculeid
                 )
 
-                possible_classifications.append(possible_classification)
+                possible_classifications.append(classification)
 
-    if not possible_classifications:
-
-        return ""
-
-    elif len(possible_classifications) == 1:
-        return possible_classifications[0]
-
-    else:
-        return handle_multiple_classifications(possible_classifications)
+    return classify_by_priority(possible_classifications)
 
 
 def handle_biproduct_reactions(rxn, bireactant_subclass):
