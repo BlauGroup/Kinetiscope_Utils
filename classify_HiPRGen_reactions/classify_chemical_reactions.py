@@ -213,7 +213,11 @@ def narrow_H_rxn_type(reactant_gaining_H, product_with_H):
 
         return "H_atom_abstraction"
 
+    # TODO check if we ever have delta_charge != 0 and not is_radical_reaction
+
     else:
+
+        # TODO raise an error here
 
         return "proton_coupled_electron_transfer"
 
