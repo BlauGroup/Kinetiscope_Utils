@@ -706,6 +706,8 @@ chemical_reaction_list = (
 # we need the kinetiscope names to do this, but just do it for the HiPRGen
 # reactions so we can write the names with these tags later
 
+# this shouldn't be called just on combination reactions
+
 reclassify_crosslinking_reactions(
     chemical_reaction_list, reaction_writing_data
 )
@@ -741,6 +743,8 @@ for index, reaction in enumerate(kinetiscope_reaction_list):
 
 # make sure each reaction in the list is unique
 
+# TODO investigate why we have duplicate reactions if any
+
 try:
 
     kinetiscope_reaction_list = (
@@ -752,7 +756,7 @@ try:
 except DuplicateReactionError as e:
     print(f"Error: {e}")
 
-barrierless_reactions = remove_barriered_reactions(kinetiscope_reaction_list)
+# barrierless_reactions = remove_barriered_reactions(kinetiscope_reaction_list)
 
 supercategory_order = [
     "absorption", "electron_ionization", "recombination", "attachment",
