@@ -186,11 +186,14 @@ def find_top_reactant_reactions(select_freq_file, reaction_name_file, start_inde
     
     return top_reactant_reactions
 
-# if __name__ == "__main__":
-#     kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\production_simulations_092124"
-#     correct_path_change_dir(kinetiscope_files_dir)
-#     select_freq_file = "excitation_selection_freq_092524.txt"
-#     reaction_name_file= "excitation_reactions_092524.txt"
-#     top_reactant_dict = find_top_reactant_reactions(select_freq_file, reaction_name_file, start_index=7, 
-#     end_index=5384)
-#     print(top_reactant_dict["C4H8_0_#2"])
+# this is the current, hackey way I find out the top reaction consuming
+# something
+
+if __name__ == "__main__":
+    kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\production_simulations_092124"
+    correct_path_change_dir(kinetiscope_files_dir)
+    select_freq_file = "excitation_selection_freq_092524.txt"
+    reaction_name_file= "excitation_reactions_092524.txt"
+    top_reactant_dict = find_top_reactant_reactions(select_freq_file, reaction_name_file, start_index=7, 
+    end_index=5384)
+    print(top_reactant_dict["PtBMAb_PHSb_phol_COO_0_#1"])
