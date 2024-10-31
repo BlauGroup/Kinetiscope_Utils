@@ -25,8 +25,8 @@ network.
 
 
 def find_reactant_pathways(
-     highest_frequency_reaction, highest_select_dict, starting_species,
-     reactant_pathways_cache=None, visited=None
+     highest_frequency_reaction, highest_select_dict, starting_species, visited,
+     reactant_pathways_cache=None
 ):
     """
     Finds and returns the pathways for each reactant of a given reaction by 
@@ -55,8 +55,6 @@ def find_reactant_pathways(
     """
     if reactant_pathways_cache is None:
         reactant_pathways_cache = {}
-    if visited is None:
-        visited = set()
 
     reactant_pathways = []
 
@@ -71,17 +69,10 @@ def find_reactant_pathways(
         # Skip non-real species (e.g., electrons) and starting species
         is_real_species = "eV" not in reactant and not reactant.isalpha()
 
-        # Check if the reactant is in the visited set to avoid looping
-        if reactant in visited:
-            break
-
-        # Mark this reactant as visited
-        visited.add(reactant)
-
         if reactant not in starting_species and is_real_species:
             pathway = find_most_selected_pathway(
                 reactant, highest_select_dict, starting_species, 
-                reactant_pathways_cache
+                reactant_pathways_cache, visited
             )
             reactant_pathways.append(pathway)     
 
@@ -92,7 +83,7 @@ def find_reactant_pathways(
 
 def find_most_selected_pathway(
     product, highest_select_dict, starting_species,
-    most_selected_pathways_cache=None
+    most_selected_pathways_cache=None, visited=None
 ):
     """
     Finds the most selected pathway for a given product based on the highest
@@ -178,6 +169,15 @@ def find_most_selected_pathway(
             current_pathway = pathway + current_pathway
 
         return current_pathway
+    # helps us to avoid loops
+
+    if visited is None:
+        visited = set()
+
+    if product in visited:
+        return []
+
+    visited.add(product)
 
     if most_selected_pathways_cache is None:
         most_selected_pathways_cache = {}
@@ -202,7 +202,7 @@ def find_most_selected_pathway(
     # highest selection frequency reaction by calling this function recursively
 
     reactant_pathways = find_reactant_pathways(
-        highest_frequency_reaction, highest_select_dict, starting_species,
+        highest_frequency_reaction, highest_select_dict, starting_species,visited,
         most_selected_pathways_cache
     )
 
@@ -223,7 +223,7 @@ def find_most_selected_pathway(
     return final_pathway
 
 
-def save_pathway_to_file(chemical_name, reactions):
+def save_pathway_to_file(filename, reactions):
     """
     Saves the pathway information to a text file.
     
@@ -246,33 +246,31 @@ def save_pathway_to_file(chemical_name, reactions):
         This function does not return a value. It writes the reaction information to a file 
         and prints a confirmation message indicating the file has been saved.
     """
-    
-    filename = f"{chemical_name}.txt"
-    
-    if os.path.exists(filename):
-       raise OSError(f"The file '{filename}' already exists.")
-    
+
     with open(filename, 'w') as file:
         
         for rxn in reactions:
-            
+        
             file.write(f"{rxn.kinetiscope_name}: {rxn.selection_freq}\n")
-            
+        
     print(f"Reaction information saved to {filename}")
-    
+
 # name of problematic species is PtBMAb_PHSb_phol_COO_0_#1
 
-kinetiscope_files_dir = r"G:\My Drive\Kinetiscope\production_simulations_092124"
+
+kinetiscope_files_dir = (
+    r"G:\My Drive\Kinetiscope\production_simulations_092124"
+)
 
 correct_path_change_dir(kinetiscope_files_dir)
 
 select_freq_file = "excitation_selection_freq_092524.txt"
-reaction_name_file= "excitation_reactions_092524.txt"
+reaction_name_file = "excitation_reactions_092524.txt"
 
 top_reaction_dict = find_top_formation_reactions(
-    select_freq_file, 
+    select_freq_file,
     reaction_name_file,
-    start_index=7, 
+    start_index=7,
     end_index=5384
 )
 
@@ -286,16 +284,23 @@ starting_species = [
 starting_species = set(starting_species)
 
 while True:
-    # input("Enter a chemical name (or 'end' to stop): ")
-    chemical_name = "PtBMAb_PHSb_phol_COO_0_#1"
-    
+
+    chemical_name = input("Enter a chemical name (or 'end' to stop): ")
+
     if chemical_name.lower() == 'end':
-        
+
         print("Exiting the script.")
         break
-       
+
+    filename = f"{chemical_name}.txt"
+
+    if os.path.exists(filename):
+        raise OSError(f"The file '{filename}' already exists.")
+
     pathway = (
-        find_most_selected_pathway(chemical_name, top_reaction_dict, starting_species)
+        find_most_selected_pathway(chemical_name,
+                                   top_reaction_dict,
+                                   starting_species)
     )
-    
-    save_pathway_to_file(chemical_name, pathway)
+
+    save_pathway_to_file(filename, pathway)
