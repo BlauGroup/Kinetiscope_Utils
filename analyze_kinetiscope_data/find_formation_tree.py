@@ -15,12 +15,11 @@ from utilities import correct_path_change_dir
 This script uses the Pathfinding class's method from HiPRGen to find reaction 
 pathways leading to the formation of a specific species in our simulations. It 
 follows the highest-frequency reactions that form the species and recursively 
-searches for the reactants of each reaction. The term "formation tree" refers
-to the underlying data structure representing how species are formed; although
-I have no proof, assuming we represent the kinetiscope network as an acyclic,
-undirected graph, the reaction pathways we find should be trees, i.e. connected
-acyclic undirected graphs which are subgraphs of a graph representing the
-network.
+searches for the reactants of each reaction. It turns out, if we created a
+graph representing our kinetiscope network, with species as nodes connected
+by reaction edges, the graph contains cycles; thus, we track whether we have
+visited a product before, and if we have, we handle the cycle by choosing the
+next most frequent reaction.
 """
 
 
@@ -59,11 +58,11 @@ def find_reactant_pathways(
     reactant_pathways = []
 
     # Use reaction reactants and products as a cache key (converting to tuples)
-    reaction_key = (tuple(highest_frequency_reaction.reactants),
-                    tuple(highest_frequency_reaction.products))
+    # reaction_key = (tuple(highest_frequency_reaction.reactants),
+    #                 tuple(highest_frequency_reaction.products))
 
-    if reaction_key in reactant_pathways_cache:
-        return reactant_pathways_cache[reaction_key]
+    # if reaction_key in reactant_pathways_cache:
+    #     return reactant_pathways_cache[reaction_key]
 
     for reactant in highest_frequency_reaction.reactants:
         # Skip non-real species (e.g., electrons) and starting species
@@ -77,7 +76,7 @@ def find_reactant_pathways(
             reactant_pathways.append(pathway)     
 
     # Cache the computed pathways before returning them
-    reactant_pathways_cache[reaction_key] = reactant_pathways
+    # reactant_pathways_cache[reaction_key] = reactant_pathways
     return reactant_pathways
 
 
@@ -195,11 +194,13 @@ def find_most_selected_pathway(
                        "selection frequency.")
 
     current_pathway = []
+    
+    all_reactions_forming_product = list(highest_select_dict[product][0].keys())
+    highest_frequency_reaction = all_reactions_forming_product[0]
 
-    # this is the reaction with the highest selection frequency forming this
-    # species
-
-    highest_frequency_reaction = highest_select_dict[product]
+    for reactant in highest_frequency_reaction.reactants:
+        if reactant in visited and len(all_reactions_forming_product) > 0:
+            highest_frequency_reaction = highest_select_dict[product][1].keys()
     current_pathway.append(highest_frequency_reaction)
 
     # returns pathways leading to the formation of the reactants of the
