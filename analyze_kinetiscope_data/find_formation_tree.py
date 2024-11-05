@@ -169,11 +169,15 @@ def find_most_selected_pathway(
             current_pathway = pathway + current_pathway
 
         return current_pathway
-    # helps us to avoid loops
+    
+    problematic_species = {"PHSb_CO_C5H5_0_#2", "PtBMAb_PHSb_phol_COO_0_#1", "PtBMAb_PHSb_COO2_C5H4_0_#2"}
 
     if visited is None:
         visited = set()
 
+    if product in problematic_species:
+        print(highest_select_dict[product])
+    
     if product in visited:
         return []
 
