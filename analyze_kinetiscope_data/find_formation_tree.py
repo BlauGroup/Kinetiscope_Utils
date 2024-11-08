@@ -169,18 +169,20 @@ def find_most_selected_pathway(
 
         return current_pathway
     
-    problematic_species = {"PHSb_CO_C5H5_0_#2", "PtBMAb_PHSb_phol_COO_0_#1", "PtBMAb_PHSb_COO2_C5H4_0_#2"}
+    # problematic_species = {"PHSb_CO_C5H5_0_#2", "PtBMAb_PHSb_phol_COO_0_#1", "PtBMAb_PHSb_COO2_C5H4_0_#2"}
 
     if visited is None:
         visited = set()
 
-    if product in problematic_species:
-        print(highest_select_dict[product])
+    # if product in problematic_species:
+    #     print(visited)
     
     if product in visited:
         return []
 
     visited.add(product)
+    
+    index = 0
 
     if most_selected_pathways_cache is None:
         most_selected_pathways_cache = {}
@@ -195,12 +197,29 @@ def find_most_selected_pathway(
 
     current_pathway = []
     
-    all_reactions_forming_product = list(highest_select_dict[product][0].keys())
-    highest_frequency_reaction = all_reactions_forming_product[0]
+    all_reactions_forming_product = list(highest_select_dict[product]) #list of dicts
+    highest_frequency_reaction = list(all_reactions_forming_product[index].keys())[0]
+    
+    if product == "PtBMAb_PHSb_phol_COO_0_#1":
+        highest_frequency_reaction = list(all_reactions_forming_product[index+1].keys())[0]
+    # print(highest_frequency_reaction)
+    # # if product in problematic_species:
+    # #     print(highest_frequency_reaction)
 
-    for reactant in highest_frequency_reaction.reactants:
-        if reactant in visited and len(all_reactions_forming_product) > 0:
-            highest_frequency_reaction = highest_select_dict[product][1].keys()
+    # while True:
+    #     altered = False  # Track if we change highest_frequency_reaction
+    #     for reactant in highest_frequency_reaction.reactants:
+    #         if reactant in visited:
+    #             print(all_reactions_forming_product)
+    #             index += 1
+    #             print(highest_frequency_reaction)
+    #             highest_frequency_reaction = list(all_reactions_forming_product[index].keys())[0]
+    #             print(highest_frequency_reaction)
+    #             altered = True  # Set to True since we altered highest_frequency_reaction
+    #             break  # Exit the for loop to restart the check
+    
+    #     if not altered:  # If no change was made, exit the while loop
+    #         break
     current_pathway.append(highest_frequency_reaction)
 
     # returns pathways leading to the formation of the reactants of the

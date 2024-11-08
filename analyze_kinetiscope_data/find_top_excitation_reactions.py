@@ -190,8 +190,43 @@ if __name__ == "__main__":
         "COO_CN_C6H4_-1",
         "PHSb_phol_0"]
 
-    reaction_list = top_reaction_dict.get("PtBMAb_PHSb_phol_COO_0_#1", None)
-    for reaction_dict in reaction_list:
-        print(list(reaction_dict.keys())[0])
-        print(print(list(reaction_dict.values())[0]))
-        print()
+    # for product, reaction_list in top_reaction_dict.items():
+    #     if product not in starting_species:
+    #         max_length = max(max_length, len(reaction_list))
+    #         if len(reaction_list) == 111:
+    #             print(product)
+
+    # print("The maximum length of lists in top_reaction_dict is:", max_length)
+    # for reaction_list in top_reaction_dict.values():
+    #     for dictionary in reaction_list:
+    #         reaction = list(dictionary.keys())[0]
+    #         if "*" in reaction.kinetiscope_name:
+    #             if list(dictionary.values())[0] > 100:
+    #                 print(reaction.kinetiscope_name)
+    #                 print(list(dictionary.values())[0])
+    # Initialize a list to store (frequency, reaction, dictionary) tuples
+    filtered_reactions = []
+    unique_reactions = set()
+    
+    # Iterate through the top_reaction_dict
+    for reaction_list in top_reaction_dict.values():
+        for dictionary in reaction_list:
+            reaction = list(dictionary.keys())[0]
+            frequency = list(dictionary.values())[0]
+            
+            # Check for "*" in the reaction name and frequency > 100
+            if "*" in reaction.kinetiscope_name and frequency > 100:
+                if reaction.kinetiscope_name not in unique_reactions:
+                    # Append tuple of (frequency, reaction, dictionary) to the list
+                    unique_reactions.add(reaction.kinetiscope_name)
+                    filtered_reactions.append((frequency, reaction, dictionary))
+    
+    # Sort the list by frequency in descending order
+    filtered_reactions.sort(reverse=True, key=lambda x: x[0])
+    
+    # Print each reaction and dictionary in sorted order
+    for frequency, reaction, dictionary in filtered_reactions:
+        print("Reaction:", reaction.kinetiscope_name)
+        print("Frequency:", frequency)
+        print("Dictionary:", dictionary)
+        print()  # For better readability between entries
