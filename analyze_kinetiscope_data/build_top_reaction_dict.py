@@ -74,8 +74,8 @@ def find_all_reactions_forming_product(product, index_reaction_dict, index_freq_
             product_is_real = not product_removed_punctuation.isalpha()
             if product_is_real:
                 selection_freq = index_freq_dict.get(index, None)
-                if selection_freq > 0:
-                    all_reactions_forming_product.append({reaction: selection_freq})
+                # if selection_freq > 0:
+                all_reactions_forming_product.append({reaction: selection_freq})
     
     # Use the helper function to sort by selection frequency
     all_reactions_forming_product = sort_reactions_by_selection_freq(all_reactions_forming_product)
@@ -190,7 +190,7 @@ if __name__ == "__main__":
         "COO_CN_C6H4_-1",
         "PHSb_phol_0"]
 
-    reaction_list = top_reaction_dict.get("PtBMAb_PHSb_phol_COO_0_#1", None)
+    reaction_list = top_reaction_dict.get("tbut_+1", None)
     for reaction_dict in reaction_list:
         print(list(reaction_dict.keys())[0])
         print(print(list(reaction_dict.values())[0]))
