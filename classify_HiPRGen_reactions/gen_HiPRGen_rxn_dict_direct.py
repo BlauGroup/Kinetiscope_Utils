@@ -93,6 +93,7 @@ def add_high_frequency_P2_reactions(
         index_rxn_dict = data.get("reactions", {})
 
         for rxn_index, rxn_dict in index_rxn_dict.items():
+            
 
             rxn_frequency = index_frequency_dict.get(rxn_index, 0)
 
@@ -150,6 +151,8 @@ P1_directory = "G:/My Drive/CRNs/euvl_092024_phase1"
 os.chdir(P1_directory)
 P1_pathways_and_reactions = loadfn("reaction_tally.json")
 P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
+print(P1_rxn_dicts)
+sys.exit()
 rxns_already_added = set()
 rxns_for_simulation = []
 
@@ -183,7 +186,7 @@ for reaction in rxns_for_simulation:  # can narrow down now
 # P2_directory = "G:/My Drive/CRNs/071924_test_p2"
 P2_directory = "G:/My Drive/CRNs/euvl_092024_phase2"
 
-frequency_threshold = 500
+frequency_threshold = 100
 
 add_high_frequency_P2_reactions(
     P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold
@@ -239,5 +242,5 @@ for reaction in rxns_for_simulation:
     reaction.classification_list = write_reaction_classification(reaction)
     add_reaction_to_dictionary(reaction, tagged_rxn_dict)
 
-json_name = "HiPRGen_rxns_to_name_full_101624.json"
+json_name = "HiPRGen_rxns_to_name_full_111424.json"
 dumpfn(tagged_rxn_dict, json_name)

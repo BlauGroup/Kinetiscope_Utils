@@ -190,8 +190,8 @@ if __name__ == "__main__":
         "COO_CN_C6H4_-1",
         "PHSb_phol_0"]
 
-    reaction_list = top_reaction_dict.get("C4H8_0_#2", None)
+    reaction_list = top_reaction_dict.get("PHSb_phol_H1_+1_#2", None)
     for reaction_dict in reaction_list:
         print(list(reaction_dict.keys())[0])
-        print(print(list(reaction_dict.values())[0]))
+        print(list(reaction_dict.values())[0])
         print()
