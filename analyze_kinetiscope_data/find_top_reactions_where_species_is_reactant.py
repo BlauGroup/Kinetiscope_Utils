@@ -245,7 +245,7 @@ if __name__ == "__main__":
         start_index=7,
         end_index=5384
     )
-    for reaction_dict in top_reaction_dict["PHSb_phol_H1_+1_#2"]:
+    for reaction_dict in top_reaction_dict["C4H8_0_#2"]:
         reaction = list(reaction_dict.keys())[0]
         selection_frequency = list(reaction_dict.values())[0]
         print(f"reaction: {reaction}")
