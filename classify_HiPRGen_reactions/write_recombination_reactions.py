@@ -9,7 +9,7 @@ from monty.serialization import loadfn
 import os
 import sys
 import networkx as nx
-import pymongo
+# import pymongo
 sys.path.append('../common')
 from Rxn_classes import HiPRGen_Reaction
 sys.path.append('../Classify_HiPRGen_reactions')
@@ -83,41 +83,20 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
             if mol_entry.entry_id in starting_species_mpculeids.values():
                 starting_species_graphs.append(mol_entry.graph)
         return starting_species_graphs
-
-    def is_pi_radical(mol_entry_graph, starting_species_graphs):
-
-        nm = nx.isomorphism.categorical_node_match("specie", None) # ensures isomorphic graphs must have the same atoms
-
-        for starting_species_graph in starting_species_graphs:
-
-            isomorphism = nx.isomorphism.GraphMatcher(mol_entry_graph, starting_species_graph, node_match = nm)
-            
-            graphs_are_different = not isomorphism.is_isomorphic()
-
-            if isomorphism.subgraph_is_isomorphic() and graphs_are_different:
-                return True
-
-        return False
     
-    def has_only_one_value_above_threshold(values,  mol_entry, threshold=0.09,):
-        """
-        Checks if a single list has exactly one value greater than the given threshold.
-        
-        Args:
-            values (list of float): A list of floating-point numbers.
-            threshold (float): The threshold above which a value is considered. Default is 0.09.
-        
-        Returns:
-            bool: True if there is exactly one value greater than the threshold, False otherwise.
-        """
-        count = 0
-
-        for atom_index, value in enumerate(values):
-            species  = document["species"][atom_index]
-            if value > 0.09 and species != "H":
-                count += 1
-
-        return count == 1
+    def is_neutral_radical(mol_entry):
+        return mol_entry.spin_multiplicity == 2 and mol_entry.charge == 0
+    
+    def radical_is_relevant(mol_entry, relevant_radical_set):
+        return mol_entry.entry_id in relevant_radical_set
+    
+    def radical_isnt_fragment(mol_entry, starting_species_graphs):
+        nm = nx.isomorphism.categorical_node_match("specie", None) # ensures isomorphic graphs must have the same atoms
+        for graph in starting_species_graphs:
+            isomorphism = nx.isomorphism.GraphMatcher(mol_entry.graph, graph, node_match = nm)
+            if isomorphism.subgraph_is_isomorphic():
+                return False
+        return True
 
     all_radicals = []
     all_pi_radicals = []
@@ -127,45 +106,37 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
 
     for mol_entry in mol_entries:
 
-        is_neutral_radical = (
-            mol_entry.spin_multiplicity == 2 and mol_entry.charge == 0
-        )
-        
-        radical_is_relevant = mol_entry.entry_id in relevant_radical_set
-
-        if is_neutral_radical and radical_is_relevant:
+        if is_neutral_radical(mol_entry) and radical_is_relevant(mol_entry, relevant_radical_set):
 
             all_radicals.append(mol_entry)
-            document = collection.find_one({"molecule_id": mol_entry.entry_id})
-            spins = document["partial_spins"]["DIELECTRIC=3,00"]["nbo"]
-            
-            if not has_only_one_value_above_threshold(spins, mol_entry):
-                all_pi_radicals.append(mol_entry)
-
-    # 236 radicals total, 207 of them pi-radicals
+            if radical_isnt_fragment(mol_entry, starting_species_graphs):
+                potentially_problematic.append(mol_entry)
+    print(f"total number of radicals: {len(all_radicals)}")
+    print(f"total number of problematic radicals: {len(potentially_problematic)}")
+    sys.exit()
 
             
 
     # for mol_entry in mol_entries:
     #     if 
 
-mongodb_info = {
-    "database": "sb_qchem",
-    "collection": "new_tasks",
-    "admin_user": "smblau_lbl.gov_readWrite",
-    "admin_password": "baffler-underranger-sanguinely-distent-flukeworm",
-    "host": "mongodb03.nersc.gov",
-    "port": 27017,
-    "aliases": {},
-    "authSource": "sb_qchem"
-}
+# mongodb_info = {
+#     "database": "sb_qchem",
+#     "collection": "new_tasks",
+#     "admin_user": "smblau_lbl.gov_readWrite",
+#     "admin_password": "baffler-underranger-sanguinely-distent-flukeworm",
+#     "host": "mongodb03.nersc.gov",
+#     "port": 27017,
+#     "aliases": {},
+#     "authSource": "sb_qchem"
+# }
 
-client = pymongo.MongoClient( #connect to mongo db
-    host=mongodb_info["host"], username = mongodb_info["admin_user"],
-    password = mongodb_info["admin_password"], authSource = mongodb_info["authSource"])
+# client = pymongo.MongoClient( #connect to mongo db
+#     host=mongodb_info["host"], username = mongodb_info["admin_user"],
+#     password = mongodb_info["admin_password"], authSource = mongodb_info["authSource"])
 
-database = client.sb_qchem
-collection = database.euvl_mar_summary
+# database = client.sb_qchem
+# collection = database.euvl_mar_summary
 
 # load current names and mpculeids 
 
