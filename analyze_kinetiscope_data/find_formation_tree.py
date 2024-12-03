@@ -19,7 +19,8 @@ searches for the reactants of each reaction. It turns out, if we created a
 graph representing our kinetiscope network, with species as nodes connected
 by reaction edges, the graph contains cycles; thus, we track whether we have
 visited a product before, and if we have, we handle the cycle by choosing the
-next most frequent reaction.
+next most frequent reaction. This also means that the title of this code is
+incorrect, because we can't be finding a tree, because a tree is acyclic!
 """
 
 

@@ -129,5 +129,6 @@ class Kinetiscope_simulation_reaction(MSONable):
         return (f"Kinetiscope Simulation Reaction:\n"
                 f"  Kinetiscope Name: {self.kinetiscope_name}\n"
                 f"  Kinetiscope Index: {self.kinetiscope_index}\n"
+                f"  Selection frequency: {self.selection_freq}\n"
                 f"  Reactants: {self.reactants}\n"
                 f"  Products: {self.products}")
