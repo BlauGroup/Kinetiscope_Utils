@@ -9,9 +9,9 @@ from monty.serialization import loadfn
 import os
 import sys
 import networkx as nx
+import pymongo
 sys.path.append('../analyze_kinetiscope_data')
-from associate_indicies_with_frequencies import build_index_freq_dict
-from create_kinetiscope_simulation_reactions import build_index_reaction_dict
+from build_top_reaction_dict import generate_rxn_data_dict
 sys.path.append('../common')
 from utilities import correct_path_change_dir
 from Rxn_classes import HiPRGen_Reaction
@@ -21,25 +21,93 @@ from reaction_classification_utilities import (
     find_mpculeid_spin
 )
 
-def find_relevant_reactions():
-    pass
 
+def get_nonzero_freq_reactions(select_freq_file, reaction_name_file, 
+                           start_index, end_index):
+    def generate_kscope_rxns(select_freq_file, reaction_name_file, 
+                             start_index, end_index):
+        return generate_rxn_data_dict(
+            select_freq_file, reaction_name_file, start_index, end_index
+        )[1]
 
-def find_kscope_rxns(select_freq_file, reaction_name_file, start_index, end_index):
-    index_freq_dict = (
-        build_index_freq_dict(select_freq_file, start_index, end_index)
+    kscope_rxns = generate_kscope_rxns(
+        select_freq_file, reaction_name_file, start_index, end_index
     )
+
+    return {
+        index: rxn for index, rxn in kscope_rxns.items()
+        if getattr(rxn, 'selection_freq', 0) != 0
+    }
+
+
+def find_times_radical_formed(kscope_rxns, chemical_dict):
+    relevant_radical_dict = {}
     
-    index_reaction_dict = (
-        build_index_reaction_dict(reaction_name_file, index_freq_dict)
-    )
+    for kscope_rxn in kscope_rxns.values():
+        if kscope_rxn.selection_freq > 0:
+            for species in kscope_rxn.products:
+                mpculeid = chemical_dict.get(species, None)
+                if mpculeid:
+                    charge = find_mpculeid_charge(mpculeid)
+                    spin = find_mpculeid_spin(mpculeid)
+                    if charge == 0 and spin == 2:
+                        if mpculeid not in relevant_radical_dict:
+                            relevant_radical_dict[mpculeid] = kscope_rxn.selection_freq
+                        else:
+                            relevant_radical_dict[mpculeid] += kscope_rxn.selection_freq
 
-    return index_reaction_dict
+    return relevant_radical_dict
 
 
-def extract_radical_mpculeids():
-    pass
+def find_relevant_radicals(relevant_radical_dict, threshold):
+    def find_total_radical_formation_reactions(relevant_radical_dict):
+        total = 0
 
+        for formation_freq in relevant_radical_dict.values():
+            total += formation_freq
+        return total
+
+    relevant_radical_set = set()
+
+    total = find_total_radical_formation_reactions(relevant_radical_dict)
+
+    for mpculeid, formation_freq in relevant_radical_dict.items():
+        test = formation_freq/total
+        if test >= threshold:
+            relevant_radical_set.add(mpculeid)
+    return relevant_radical_set
+
+
+def find_underbonded_sites(relevant_radical_set, mol_entries):
+    # def find_mol_entries(relevant_radical_set, mol_entries):
+    #     mol_entry_lookup = {}
+        
+    #     for mol_entry in mol_entries:
+    #         if mol_entry.entry_id in relevant_radical_set:
+    #             mol_entry_lookup[mol_entry.entry_id] = mol_entry
+    #     return mol_entry_lookup
+
+    underbonded_sites = {}
+    
+    
+    for relevant_radical in relevant_radical_set:
+        underbonded_atoms = []
+        document = collection.find_one({"molecule_id": relevant_radical})
+        spins = document["partial_spins"]["DIELECTRIC=3,00"]["nbo"]
+        for atom_index, spin in enumerate(spins):
+            species  = document["species"][atom_index]
+            if spin > 0.09 and species != "H":
+                underbonded_atoms.append(atom_index)
+        underbonded_sites[relevant_radical] = underbonded_atoms
+    return underbonded_sites
+
+def find_mol_entries(relevant_radical_set, mol_entries):
+    mol_entry_lookup = {}
+    
+    for mol_entry in mol_entries:
+        if mol_entry.entry_id in relevant_radical_set:
+            mol_entry_lookup[mol_entry.entry_id] = mol_entry
+    return mol_entry_lookup
 
 def collect_lists_from_nested_dict(d):
     """
@@ -134,42 +202,46 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
             all_radicals.append(mol_entry)
             if radical_isnt_fragment(mol_entry, starting_species_graphs):
                 potentially_problematic.append(mol_entry)
-    total_number_radicals = len(all_radicals)
-    number_problematic_radicals = len(potentially_problematic)
-    print(f"total number of radicals: {total_number_radicals}")
-    print(f"total number of problematic radicals: {number_problematic_radicals}")
-    print(f"estimated number of reactions: {total_number_radicals * number_problematic_radicals}")
-    sys.exit()
+    return all_radicals, potentially_problematic
+    # total_number_radicals = len(all_radicals)
+    # number_problematic_radicals = len(potentially_problematic)
+    # print(f"total number of radicals: {total_number_radicals}")
+    # print(f"total number of problematic radicals: {number_problematic_radicals}")
+    # print(f"estimated number of reactions: {total_number_radicals * number_problematic_radicals}")
+    # sys.exit()
 
             
 
     # for mol_entry in mol_entries:
     #     if 
+print("Connecting to MongoDB...")
 
-# mongodb_info = {
-#     "database": "sb_qchem",
-#     "collection": "new_tasks",
-#     "admin_user": "smblau_lbl.gov_readWrite",
-#     "admin_password": "baffler-underranger-sanguinely-distent-flukeworm",
-#     "host": "mongodb03.nersc.gov",
-#     "port": 27017,
-#     "aliases": {},
-#     "authSource": "sb_qchem"
-# }
+mongodb_info = {
+    "database": "sb_qchem",
+    "collection": "new_tasks",
+    "admin_user": "smblau_lbl.gov_readWrite",
+    "admin_password": "baffler-underranger-sanguinely-distent-flukeworm",
+    "host": "mongodb03.nersc.gov",
+    "port": 27017,
+    "aliases": {},
+    "authSource": "sb_qchem"
+}
 
-# client = pymongo.MongoClient( #connect to mongo db
-#     host=mongodb_info["host"], username = mongodb_info["admin_user"],
-#     password = mongodb_info["admin_password"], authSource = mongodb_info["authSource"])
+client = pymongo.MongoClient( #connect to mongo db
+    host=mongodb_info["host"], username = mongodb_info["admin_user"],
+    password = mongodb_info["admin_password"], authSource = mongodb_info["authSource"])
 
-# database = client.sb_qchem
-# collection = database.euvl_mar_summary
+database = client.sb_qchem
+collection = database.euvl_mar_summary
 
 # load current names and mpculeids 
 
-os.chdir("C:/Users/jacob/Kinetiscope_Utils/classify_HiPRGen_reactions")
-current_mpculeids_and_names = loadfn("name_full_mpculeid_092124.json")
+print("Done!")
 
 print("Loading mol entries...")
+
+os.chdir("C:/Users/jacob/Kinetiscope_Utils/classify_HiPRGen_reactions")
+current_mpculeids_and_names = loadfn("name_full_mpculeid_092124.json")
 
 with open('mol_entries.pickle', 'rb') as f: #loads HiPRGen mol_entry objs
         
@@ -209,9 +281,9 @@ print('Done!')
 #         if charge == 0 and spin == 2:
 #             relevant_radical_set.add(specie)
 
-# make a set of only radicals that actually are involved in HiPRGen reactions 
 
 # built radical and recomb_radical sets
+print("Finding radicals that formed in kinetiscope...")
 
 kinetiscope_files_dir = (
     r"G:\My Drive\Kinetiscope\production_simulations_092124"
@@ -222,29 +294,42 @@ correct_path_change_dir(kinetiscope_files_dir)
 select_freq_file = "excitation_selection_freq_092524.txt"
 reaction_name_file = "excitation_reactions_092524.txt"
 
-kscope_rxns = find_kscope_rxns(
+relevant_reactions = get_nonzero_freq_reactions(
     select_freq_file,
     reaction_name_file,
     start_index=7,
     end_index=5384
 )
 
-relevant_radical_list = []
+chemical_dict = loadfn("name_full_mpculeid_092124.json")
+relevant_radical_dict = find_times_radical_formed(relevant_reactions,
+                                                  chemical_dict)
 
-for kscope_rxn in kscope_rxns.values():
-    if kscope_rxn.selection_freq > 0:
-        species_list = kscope_rxn.kinetiscope_name.split()
-        chemical_dict = loadfn("name_full_mpculeid_092124.json")
-        for species in species_list:
-            mpculeid = chemical_dict.get(species, None)
-            if mpculeid:
-                charge = find_mpculeid_charge(mpculeid)
-                spin = find_mpculeid_spin(mpculeid)
-                if charge == 0 and spin == 2:
-                    radical_dict = {mpculeid:kscope_rxn}
-                    if mpculeid not in relevant_radical_list:
-                        relevant_radical_list.append(radical_dict)
-                    elif 
+relevant_radical_set = find_relevant_radicals(relevant_radical_dict,
+                                              threshold=0.01)
+
+print("Done!")
+
+underbonded_sites = find_underbonded_sites(relevant_radical_set, mol_entries)
+radical_mol_entries = find_mol_entries(relevant_radical_set, mol_entries)
+
+# for kscope_rxn in kscope_rxns.values():
+#     if kscope_rxn.selection_freq > 0:
+#         for species in kscope_rxn.products:
+#             mpculeid = chemical_dict.get(species, None)
+#             if mpculeid:
+#                 charge = find_mpculeid_charge(mpculeid)
+#                 spin = find_mpculeid_spin(mpculeid)
+#                 if charge == 0 and spin == 2:
+#                     if mpculeid not in relevant_radical_dict:
+#                         relevant_radical_dict[mpculeid] = kscope_rxn.selection_freq
+#                     else:
+#                         relevant_radical_dict[mpculeid] += kscope_rxn.selection_freq
+
+
+
+# print(f"total number of relevant radicals: {len(radical_set)}")
+
 
 # radical_reactions = list()
 
@@ -270,10 +355,24 @@ for kscope_rxn in kscope_rxns.values():
 # print(sum)
 # print(0.01*sum)
 
-# all_radicals, radicals_to_recombine = build_radicals_sets(
-#     mol_entries, relevant_radical_set
-# )
+all_radicals, radicals_to_recombine = build_radicals_sets(
+    mol_entries, relevant_radical_set
+)
 
+for problem_radical in radicals_to_recombine:
+    for radical in all_radicals:
+        problem_graph = radical_mol_entries[problem_radical].graph
+        print(problem_graph.nodes)
+        radical_graph = radical_mol_entries[radical].graph
+        problem_underbonded_atoms = underbonded_sites[problem_radical]
+        radical_underbonded_atoms = underbonded_sites[radical]
+        combined_graph = nx.compose(problem_graph, radical_graph)
+        print(combined_graph.nodes)
+        sys.exit()
+        # for site in problem_underbonded_atoms:
+        #     for atom in radical_underbonded_atoms:
+                
+        
 # for each recomb radical,
 # generate a recomb rxn,
 #  save the recomb mpculid and
