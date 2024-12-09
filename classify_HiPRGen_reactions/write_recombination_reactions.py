@@ -11,6 +11,7 @@ import sys
 import networkx as nx
 import pymongo
 import copy
+from collections import Counter
 sys.path.append('../analyze_kinetiscope_data')
 from build_top_reaction_dict import generate_rxn_data_dict
 sys.path.append('../common')
@@ -203,6 +204,11 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
             all_radicals.append(mol_entry.entry_id)
             if radical_isnt_fragment(mol_entry, starting_species_graphs):
                 potentially_problematic.append(mol_entry.entry_id)
+    # total_number_radicals = len(all_radicals)
+    # number_problematic_radicals = len(potentially_problematic)
+    # print(f"total number of radicals: {total_number_radicals}")
+    # print(f"total number of problematic radicals: {number_problematic_radicals}")
+    # print(f"estimated number of reactions: {total_number_radicals * number_problematic_radicals}")
     return all_radicals, potentially_problematic
 
 def nodes_are_sequential_ints(int_list):
@@ -222,13 +228,6 @@ def nodes_are_sequential_ints(int_list):
         # Check if the current element is exactly 1 greater than the previous one
         if int_list[i] != int_list[i - 1] + 1:
             raise ValueError(f"List is not sequential at index {i}: {int_list[i-1]} -> {int_list[i]}")
-    # print("The list contains sequential integers.")
-    # total_number_radicals = len(all_radicals)
-    # number_problematic_radicals = len(potentially_problematic)
-    # print(f"total number of radicals: {total_number_radicals}")
-    # print(f"total number of problematic radicals: {number_problematic_radicals}")
-    # print(f"estimated number of reactions: {total_number_radicals * number_problematic_radicals}")
-    # sys.exit()
 
 def get_radical_node_mapping(radical_nodes, problem_radical_nodes):
     offset = len(problem_radical_nodes)
@@ -236,8 +235,6 @@ def get_radical_node_mapping(radical_nodes, problem_radical_nodes):
     return {index: index+offset for index in radical_nodes}
             
 
-    # for mol_entry in mol_entries:
-    #     if 
 print("Connecting to MongoDB...")
 
 mongodb_info = {
@@ -278,7 +275,24 @@ with open('mol_entries.pickle', 'rb') as f: #loads HiPRGen mol_entry objs
         print("Need to use the pickle file from phase 2, not phase 1")
         print("The 'electron species' in phase 1 causes issues here")
         sys.exit()
-    
+
+# TODO need to create new mpculeids for each entry to test to see if we already
+# have a given species
+mpculeid_mapping = {}
+new_mpculeid_set = set()
+for mol_entry in mol_entries:
+    # mol_entry_ids.add(mol_entry.entry_id)
+    # mol_graph.graph is a nx MultiGraph
+    new_hash = nx.weisfeiler_lehman_graph_hash(
+       nx.Graph(mol_entry.graph), node_attr="specie"
+    )
+    formula = mol_entry.formula.replace(" ", "")
+    test_mpculeid = new_hash + "-" + formula + "-"
+    charge_string = str(mol_entry.charge) if mol_entry.charge >= 0 else "m" + str(abs(mol_entry.charge))
+    test_mpculeid = test_mpculeid + charge_string + "-" + str(mol_entry.spin_multiplicity)
+    mpculeid_mapping[mol_entry.entry_id] = test_mpculeid
+    mol_entry.entry_id = test_mpculeid
+    new_mpculeid_set.add(test_mpculeid)
 print('Done!')
 
 # full_rxns = "HiPRGen_rxns_to_name_full_092124.json"
@@ -383,6 +397,7 @@ all_radicals, radicals_to_recombine = build_radicals_sets(
     mol_entries, relevant_radical_set
 )
 recombinant_graphs = []
+recombinant_mpculeids = set()
 
 for problem_radical in radicals_to_recombine:
     for radical in all_radicals:
@@ -398,16 +413,35 @@ for problem_radical in radicals_to_recombine:
         problem_underbonded_atoms = underbonded_sites[problem_radical]
         radical_underbonded_atoms = underbonded_sites[radical]
         combined_graph = nx.disjoint_union(problem_graph, radical_graph)
+        nodes = list(combined_graph.nodes(data='specie'))
+        atom_counts = Counter(tup[1] for tup in nodes)
+
+        # strings (which we sort here) are sorted alphabetically by default
+
+        sorted_atoms = sorted(atom_counts.items())
+        formula = ''.join(f"{atom}{count}" for atom, count in sorted_atoms)
+
         
         for problem_underbonded_atom in problem_underbonded_atoms:
             for original_atom in radical_underbonded_atoms:
                 graph_copy = copy.deepcopy(combined_graph)
                 atom_in_combined_graph = mapping[original_atom]
                 graph_copy.add_edge(problem_underbonded_atom, atom_in_combined_graph)
-                graph_hash = nx.weisfeiler_lehman_graph_hash(graph_copy, node_attribute='specie')
+                print(type(graph_copy))
+                sys.exit()
+                graph_hash = nx.weisfeiler_lehman_graph_hash(graph_copy, node_attr='specie')
+                
+                # we're combining neutral radicals with neutral radicals, so
+                # the resulting species will always be neutral and closed-shell
+                
+                mpculeid = graph_hash + "-" + formula + "-0-1"
+                if mpculeid in mol_entry_ids:
+                    print(f"mpculeids already found!: {mpculeid}")
+                    sys.exit()
                 # for mpculeids we need the chemical formula
                 if graph_copy not in recombinant_graphs:
-                    recombinant_graphs.append(graph_copy)
+                    recombinant_mpculeids.add(mpculeid)
+                    recombinant_graphs.append(graph_copy)                
 print(f"Estimated number of recombinants: {len(radicals_to_recombine) * len(all_radicals)}")
 print(f"Total number of new recombinants: {len(recombinant_graphs)}")
         # combined_list = list(combined_graph.nodes(data=True))
