@@ -55,6 +55,9 @@ def functional_group_present(mol_graph, func):
     nm = nx.isomorphism.categorical_node_match("specie", None) #ensures isomorphic graphs must have the same atoms
     isomorphism = nx.isomorphism.GraphMatcher(mol_graph, func, node_match = nm)
     
+    # ismorphism.subgraph_is_isomorphic returns True if a subgraph of G1 is 
+    # isomorphic to G2.
+    
     return isomorphism.subgraph_is_isomorphic(), isomorphism.subgraph_isomorphisms_iter()
 
 def update_species_name(species_name, func_group_name, func_name_already_added):

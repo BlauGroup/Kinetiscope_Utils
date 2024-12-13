@@ -12,11 +12,12 @@ import networkx as nx
 import pymongo
 import copy
 from collections import Counter
+from pymatgen.core.structure import Molecule
 sys.path.append('../analyze_kinetiscope_data')
 from build_top_reaction_dict import generate_rxn_data_dict
 sys.path.append('../common')
 from utilities import correct_path_change_dir
-from Rxn_classes import HiPRGen_Reaction
+from Rxn_classes import HiPRGen_Reaction, RecombMolEntry
 sys.path.append('../Classify_HiPRGen_reactions')
 from reaction_classification_utilities import (
     find_mpculeid_charge,
@@ -80,7 +81,7 @@ def find_relevant_radicals(relevant_radical_dict, threshold):
     return relevant_radical_set
 
 
-def find_underbonded_sites(relevant_radical_set, mol_entries):
+def find_underbonded_sites(relevant_radical_set, new_to_old, mol_entries):
     # def find_mol_entries(relevant_radical_set, mol_entries):
     #     mol_entry_lookup = {}
         
@@ -94,7 +95,8 @@ def find_underbonded_sites(relevant_radical_set, mol_entries):
     
     for relevant_radical in relevant_radical_set:
         underbonded_atoms = []
-        document = collection.find_one({"molecule_id": relevant_radical})
+        lookup_mpculeid = new_to_old[relevant_radical]
+        document = collection.find_one({"molecule_id": lookup_mpculeid})
         spins = document["partial_spins"]["DIELECTRIC=3,00"]["nbo"]
         for atom_index, spin in enumerate(spins):
             species  = document["species"][atom_index]
@@ -161,7 +163,7 @@ def collect_lists_from_nested_dict(d):
 
     return collected_items
 
-def build_radicals_sets(mol_entries, relevant_radical_set):
+def build_radicals_sets(mol_entries, new_to_old, relevant_radical_set):
     def find_starting_species_graphs(mol_entries):
         starting_species_mpculeids = {
             "TPS": "bfed458e642b8daa1eab6bc02d5e5682-C18H15S1-1-1",
@@ -173,8 +175,9 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
         starting_species_graphs = []
         
         for mol_entry in mol_entries:
-            if mol_entry.entry_id in starting_species_mpculeids.values():
-                starting_species_graphs.append(mol_entry.graph)
+            lookup_mpculeid = new_to_old[mol_entry.entry_id]
+            if lookup_mpculeid in starting_species_mpculeids.values():
+                starting_species_graphs.append(nx.Graph(mol_entry.graph))
         return starting_species_graphs
     
     def is_neutral_radical(mol_entry):
@@ -186,14 +189,18 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
     def radical_isnt_fragment(mol_entry, starting_species_graphs):
         nm = nx.isomorphism.categorical_node_match("specie", None) # ensures isomorphic graphs must have the same atoms
         for graph in starting_species_graphs:
-            isomorphism = nx.isomorphism.GraphMatcher(mol_entry.graph, graph, node_match = nm)
+
+            # ismorphism.subgraph_is_isomorphic returns True if a subgraph of
+            # G1 is isomorphic to G2.
+
+            isomorphism = nx.isomorphism.GraphMatcher(graph, nx.Graph(mol_entry.graph), node_match = nm)
             if isomorphism.subgraph_is_isomorphic():
                 return False
         return True
 
-    all_radicals = []
-    all_pi_radicals = []
-    potentially_problematic = []
+    all_radicals = set()
+    # all_pi_radicals = []
+    potentially_problematic = set()
 
     starting_species_graphs = find_starting_species_graphs(mol_entries)
 
@@ -201,39 +208,115 @@ def build_radicals_sets(mol_entries, relevant_radical_set):
 
         if is_neutral_radical(mol_entry) and radical_is_relevant(mol_entry, relevant_radical_set):
 
-            all_radicals.append(mol_entry.entry_id)
+            all_radicals.add(mol_entry.entry_id)
             if radical_isnt_fragment(mol_entry, starting_species_graphs):
-                potentially_problematic.append(mol_entry.entry_id)
-    # total_number_radicals = len(all_radicals)
-    # number_problematic_radicals = len(potentially_problematic)
+                potentially_problematic.add(mol_entry.entry_id)
+    total_number_radicals = len(all_radicals)
+    number_problematic_radicals = len(potentially_problematic)
+    # nonproblematic = all_radicals - potentially_problematic
+    # for mpculeid in nonproblematic:
+    #     print(new_to_old[mpculeid])
+    #     print()
+    # sys.exit()
+    # # for mpculeid in potentially_problematic:
+    # #     print(new_to_old[mpculeid])
+    # #     print()
+    # # sys.exit()
     # print(f"total number of radicals: {total_number_radicals}")
     # print(f"total number of problematic radicals: {number_problematic_radicals}")
     # print(f"estimated number of reactions: {total_number_radicals * number_problematic_radicals}")
+    # sys.exit()
     return all_radicals, potentially_problematic
 
-def nodes_are_sequential_ints(int_list):
-    """
-    Checks if a list contains sequential integers.
-    
-    Parameters:
-        int_list (list): A list of integers to check.
-        
-    Raises:
-        ValueError: If the list does not contain sequential integers.
-    """
-    for i in range(1, len(int_list)):
-        # Check if each element is an integer
-        if not isinstance(int_list[i], int):
-            raise ValueError(f"Element at index {i} is not an integer: {int_list[i]}")
-        # Check if the current element is exactly 1 greater than the previous one
-        if int_list[i] != int_list[i - 1] + 1:
-            raise ValueError(f"List is not sequential at index {i}: {int_list[i-1]} -> {int_list[i]}")
+
 
 def get_radical_node_mapping(radical_nodes, problem_radical_nodes):
     offset = len(problem_radical_nodes)
     
     return {index: index+offset for index in radical_nodes}
+
+def collect_graph_and_nodes(radical_mpculeid, radical_mol_entries):
+    def ensure_nodes_are_sequential_ints(int_list):
+        """
+        Checks if a list contains sequential integers.
+        
+        Parameters:
+            int_list (list): A list of integers to check.
             
+        Raises:
+            ValueError: If the list does not contain sequential integers.
+        """
+        for i in range(1, len(int_list)):
+            # Check if each element is an integer
+            if not isinstance(int_list[i], int):
+                raise ValueError(f"Element at index {i} is not an integer: {int_list[i]}")
+            # Check if the current element is exactly 1 greater than the previous one
+            if int_list[i] != int_list[i - 1] + 1:
+                raise ValueError(f"List is not sequential at index {i}: {int_list[i-1]} -> {int_list[i]}")
+
+    mol_entry = radical_mol_entries[radical_mpculeid]
+    graph = mol_entry.graph
+    graph_node_list = list(graph.nodes)
+    ensure_nodes_are_sequential_ints(graph_node_list)
+    return graph, graph_node_list
+
+def build_combined_graph(problem_radical, radical, radical_mol_entries, underbonded_sites):
+        problem_graph, problem_node_list = collect_graph_and_nodes(
+            problem_radical, radical_mol_entries
+        )
+        radical_graph, radical_node_list = collect_graph_and_nodes(
+            radical, radical_mol_entries
+        )
+        mapping = get_radical_node_mapping(radical_node_list, problem_node_list)
+        
+        combined_graph = nx.disjoint_union(problem_graph, radical_graph)
+        nodes = list(combined_graph.nodes(data='specie'))
+        return combined_graph, nodes, mapping
+
+
+def write_new_formula(node_list):
+    atom_counts = Counter(tup[1] for tup in node_list)
+
+    # strings (which we sort here) are sorted alphabetically by default
+
+    sorted_atoms = sorted(atom_counts.items())
+    return ''.join(f"{atom}{count}" for atom, count in sorted_atoms)
+
+def generate_recombinant_graph(combined_graph, problem_underbonded_atom, atom_in_combined_graph):
+    graph_copy = copy.deepcopy(combined_graph)
+    atom_in_combined_graph = mapping[original_atom]
+    graph_copy.add_edge(
+        problem_underbonded_atom, atom_in_combined_graph
+    )
+    
+    return graph_copy
+    
+    
+def WriteNewMpculeid(graph, formula, charge_int, spin):
+    def GenerateGraphHash(graph):
+        graph_hash = nx.weisfeiler_lehman_graph_hash(
+           nx.Graph(graph), node_attr="specie"
+        )
+        return graph_hash
+
+    def WriteChargeString(charge_int):
+        charge_string = str(charge_int) if charge_int >= 0 else "m" + str(abs(charge_int))
+        return charge_string
+    
+    
+    
+    graph_hash = GenerateGraphHash(graph)
+    charge_string = WriteChargeString(charge_int)
+    
+    to_combine = [graph_hash, formula, charge_string, str(spin)]
+    
+    mpculeid = "-".join(to_combine)
+    
+    return mpculeid
+
+
+def write_recombination_reaction(reactant_list, recombinant):
+    return " + ".join(reactant_list) + " => " + recombinant
 
 print("Connecting to MongoDB...")
 
@@ -248,14 +331,17 @@ mongodb_info = {
     "authSource": "sb_qchem"
 }
 
-client = pymongo.MongoClient( #connect to mongo db
-    host=mongodb_info["host"], username = mongodb_info["admin_user"],
-    password = mongodb_info["admin_password"], authSource = mongodb_info["authSource"])
+client = pymongo.MongoClient(
+    host=mongodb_info["host"],
+    username=mongodb_info["admin_user"],
+    password=mongodb_info["admin_password"],
+    authSource=mongodb_info["authSource"]
+)
 
 database = client.sb_qchem
 collection = database.euvl_mar_summary
 
-# load current names and mpculeids 
+# load current names and mpculeids
 
 print("Done!")
 
@@ -264,63 +350,39 @@ print("Loading mol entries...")
 os.chdir("C:/Users/jacob/Kinetiscope_Utils/classify_HiPRGen_reactions")
 current_mpculeids_and_names = loadfn("name_full_mpculeid_092124.json")
 
-with open('mol_entries.pickle', 'rb') as f: #loads HiPRGen mol_entry objs
-        
+# loads HiPRGen mol_entry objs
+
+with open('mol_entries.pickle', 'rb') as f:
+
     try:
-        
+
         mol_entries = pickle.load(f)
-    
+
     except AttributeError:
-        
+
         print("Need to use the pickle file from phase 2, not phase 1")
         print("The 'electron species' in phase 1 causes issues here")
         sys.exit()
 
-# TODO need to create new mpculeids for each entry to test to see if we already
-# have a given species
 mpculeid_mapping = {}
 new_mpculeid_set = set()
+
 for mol_entry in mol_entries:
-    # mol_entry_ids.add(mol_entry.entry_id)
-    # mol_graph.graph is a nx MultiGraph
-    new_hash = nx.weisfeiler_lehman_graph_hash(
-       nx.Graph(mol_entry.graph), node_attr="specie"
-    )
+
     formula = mol_entry.formula.replace(" ", "")
-    test_mpculeid = new_hash + "-" + formula + "-"
-    charge_string = str(mol_entry.charge) if mol_entry.charge >= 0 else "m" + str(abs(mol_entry.charge))
-    test_mpculeid = test_mpculeid + charge_string + "-" + str(mol_entry.spin_multiplicity)
-    mpculeid_mapping[mol_entry.entry_id] = test_mpculeid
-    mol_entry.entry_id = test_mpculeid
-    new_mpculeid_set.add(test_mpculeid)
+
+    mpculeid = WriteNewMpculeid(
+        mol_entry.graph, formula, mol_entry.charge, mol_entry.spin_multiplicity
+    )
+
+    mpculeid_mapping[mol_entry.entry_id] = mpculeid
+    mol_entry.entry_id = mpculeid
+    new_mpculeid_set.add(mpculeid)
+
 print('Done!')
 
-# full_rxns = "HiPRGen_rxns_to_name_full_092124.json"
-# HiPRGen_reaction_list = loadfn(full_rxns)
-# HiPRGen_ionization_reactions = list(HiPRGen_reaction_list["ionization"].values())[0]
-# chemical_reaction_list = (
-#     collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
-# )
+new_to_old = {value: key for key, value in mpculeid_mapping.items()}
 
-# all_HiPRGen_rxns = HiPRGen_ionization_reactions + chemical_reaction_list
-
-# relevant_radical_set = set()
-
-# for HiPRGen_rxn in all_HiPRGen_rxns:
-#     reactants = HiPRGen_rxn.reactants
-#     products = HiPRGen_rxn.products
-    
-#     species = reactants + products
-    
-#     for specie in species:
-#         charge = find_mpculeid_charge(specie)
-#         spin = find_mpculeid_spin(specie)
-        
-#         if charge == 0 and spin == 2:
-#             relevant_radical_set.add(specie)
-
-
-# built radical and recomb_radical sets
 print("Finding radicals that formed in kinetiscope...")
 
 kinetiscope_files_dir = (
@@ -340,110 +402,76 @@ relevant_reactions = get_nonzero_freq_reactions(
 )
 
 chemical_dict = loadfn("name_full_mpculeid_092124.json")
+corrected_mpculeids = {
+    name: mpculeid_mapping[mpculeid]
+    for name, mpculeid in chemical_dict.items()
+    }
+
 relevant_radical_dict = find_times_radical_formed(relevant_reactions,
-                                                  chemical_dict)
+                                                  corrected_mpculeids)
 
 relevant_radical_set = find_relevant_radicals(relevant_radical_dict,
                                               threshold=0.01)
 
 print("Done!")
 
-underbonded_sites = find_underbonded_sites(relevant_radical_set, mol_entries)
+underbonded_sites = find_underbonded_sites(
+    relevant_radical_set, new_to_old, mol_entries
+)
+
 radical_mol_entries = find_mol_entries(relevant_radical_set, mol_entries)
 
-# for kscope_rxn in kscope_rxns.values():
-#     if kscope_rxn.selection_freq > 0:
-#         for species in kscope_rxn.products:
-#             mpculeid = chemical_dict.get(species, None)
-#             if mpculeid:
-#                 charge = find_mpculeid_charge(mpculeid)
-#                 spin = find_mpculeid_spin(mpculeid)
-#                 if charge == 0 and spin == 2:
-#                     if mpculeid not in relevant_radical_dict:
-#                         relevant_radical_dict[mpculeid] = kscope_rxn.selection_freq
-#                     else:
-#                         relevant_radical_dict[mpculeid] += kscope_rxn.selection_freq
-
-
-
-# print(f"total number of relevant radicals: {len(radical_set)}")
-
-
-# radical_reactions = list()
-
-# for kscope_rxn in kscope_rxns.values():
-#     if kscope_rxn.selection_freq > 0:
-#         species_list = kscope_rxn.kinetiscope_name.split()
-#         chemical_dict = loadfn("name_full_mpculeid_092124.json")
-#         for species in species_list:
-#             mpculeid = chemical_dict.get(species, None)
-#             if mpculeid:
-#                 charge = find_mpculeid_charge(mpculeid)
-#                 spin = find_mpculeid_spin(mpculeid)
-#                 if charge == 0 and spin == 2:
-#                     if kscope_rxn not in radical_reactions:
-#                         radical_reactions.append(kscope_rxn)
-
-# sorted_reactions = sorted(radical_reactions, key=lambda reaction: reaction.selection_freq, reverse=True)
-
-# sum = 0
-
-# for reaction in sorted_reactions:
-#     sum += reaction.selection_freq
-# print(sum)
-# print(0.01*sum)
-# , rename=("P","R")
 all_radicals, radicals_to_recombine = build_radicals_sets(
-    mol_entries, relevant_radical_set
+    mol_entries, new_to_old, relevant_radical_set
 )
+
 recombinant_graphs = []
+new_mol_entries = []
 recombinant_mpculeids = set()
+recombination_reactions = set()
 
 for problem_radical in radicals_to_recombine:
     for radical in all_radicals:
-        problem_entry = radical_mol_entries[problem_radical]
-        problem_graph = problem_entry.graph
-        problem_list = list(problem_graph.nodes)
-        nodes_are_sequential_ints(problem_list)
-        radical_entry = radical_mol_entries[radical]
-        radical_graph = radical_entry.graph
-        radical_list = list(radical_graph.nodes)
-        nodes_are_sequential_ints(radical_list)
-        mapping = get_radical_node_mapping(radical_list, problem_list)
+
+        combined_graph, node_list, mapping = build_combined_graph(
+            problem_radical, radical, radical_mol_entries, underbonded_sites
+        )
+
+        formula = write_new_formula(node_list)
         problem_underbonded_atoms = underbonded_sites[problem_radical]
         radical_underbonded_atoms = underbonded_sites[radical]
-        combined_graph = nx.disjoint_union(problem_graph, radical_graph)
-        nodes = list(combined_graph.nodes(data='specie'))
-        atom_counts = Counter(tup[1] for tup in nodes)
 
-        # strings (which we sort here) are sorted alphabetically by default
-
-        sorted_atoms = sorted(atom_counts.items())
-        formula = ''.join(f"{atom}{count}" for atom, count in sorted_atoms)
-
-        
         for problem_underbonded_atom in problem_underbonded_atoms:
             for original_atom in radical_underbonded_atoms:
-                graph_copy = copy.deepcopy(combined_graph)
+
                 atom_in_combined_graph = mapping[original_atom]
-                graph_copy.add_edge(problem_underbonded_atom, atom_in_combined_graph)
-                print(type(graph_copy))
-                sys.exit()
-                graph_hash = nx.weisfeiler_lehman_graph_hash(graph_copy, node_attr='specie')
-                
+
+                recombinant_graph = generate_recombinant_graph(
+                    combined_graph,
+                    problem_underbonded_atom,
+                    atom_in_combined_graph
+                )
+
                 # we're combining neutral radicals with neutral radicals, so
                 # the resulting species will always be neutral and closed-shell
-                
-                mpculeid = graph_hash + "-" + formula + "-0-1"
-                if mpculeid in mol_entry_ids:
-                    print(f"mpculeids already found!: {mpculeid}")
-                    sys.exit()
-                # for mpculeids we need the chemical formula
-                if graph_copy not in recombinant_graphs:
+
+                mpculeid = WriteNewMpculeid(recombinant_graph, formula, 0, 1)
+
+                if mpculeid not in new_mpculeid_set:
+
                     recombinant_mpculeids.add(mpculeid)
-                    recombinant_graphs.append(graph_copy)                
+                    recombinant_graphs.append(recombinant_graph)
+                    reactant_list = sorted([radical, problem_radical])
+                    reaction = write_recombination_reaction(
+                        reactant_list, mpculeid
+                    )
+                    mol = Molecule()
+                    recombination_reactions.add(reaction)
+                    # sys.exit()
 print(f"Estimated number of recombinants: {len(radicals_to_recombine) * len(all_radicals)}")
-print(f"Total number of new recombinants: {len(recombinant_graphs)}")
+# estimated number: 3721, w/o removing duplicates
+print(f"Total number of new recombinants: {len(recombinant_mpculeids)}")
+print(f"Total number of new reactions: {len(recombination_reactions)}")
         # combined_list = list(combined_graph.nodes(data=True))
         # for index, entry in enumerate(problem_list):
         #     corresponding_entry = combined_list[index]
