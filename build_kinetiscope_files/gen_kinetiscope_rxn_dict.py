@@ -483,6 +483,7 @@ def build_csv_dict(reaction):
             csv_dict['fwd_prog_k'] = 1
             csv_dict['fwd_k'] = reaction.rate_coefficient
 
+# TODO change defualt values here to zero
     csv_dict = {
         '# equation': reaction.kinetiscope_name,
         'fwd_A': 1,
