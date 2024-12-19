@@ -488,6 +488,7 @@ def build_csv_dict(reaction):
         'fwd_A': 1,
         'fwd_temp_coeff': 0,
         'fwd_Ea': 0,
+        'fwd_k': 0,
         'rev_A': 1,
         'rev_M': 0,
         'rev_Ea': 0,
@@ -497,6 +498,7 @@ def build_csv_dict(reaction):
         'alpha_val': 0.5,
         'equil_potential': 0,
         'num_electrons': 0,
+        'fwd_prog_k': 1,
         'rev_prog_k': 1,
         'non_stoichiometric': 0,
         'rate_constant_format': 0
@@ -641,12 +643,17 @@ kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
 full_rxns = "HiPRGen_rxns_to_name_full_092124.json"
 full_rxn_dict = loadfn(full_rxns)
+original_recombinations = full_rxn_dict["chemical"]["bimolecular"]["combination"]["neutral"]["neutral_radical_neutral_radical_combination"]
 recomb_reactions = loadfn("Recombination_rxns_121824.json")
-
+additional_recombinations = recomb_reactions["chemical"]["bimolecular"]["combination"]["neutral"]["neutral_radical_neutral_radical_combination"]
+original_recombinations.extend(additional_recombinations)
 # I have tested and none of the recomb reactions are already present in the
 # rxns_without_recomb
 
-full_rxn_dict.update(recomb_reactions)
+# full_rxn_dict.update(recomb_reactions)
+# radical_radical_recombination = full_rxn_dict["chemical"]["bimolecular"]["combination"]["neutral"]["neutral_radical_neutral_radical_combination"]
+# print(radical_radical_recombination)
+# sys.exit()
 # HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
 pickle_directory = \
@@ -694,7 +701,7 @@ reaction_writing_data = ReactionDataStorage(
 
 HiPRGen_ionization_reactions = full_rxn_dict["ionization"].values()
 
-# # generate kinetiscope reactions for ionization reacctions
+# generate kinetiscope reactions for ionization reacctions
 
 for rxn_list in HiPRGen_ionization_reactions:
 
@@ -714,11 +721,10 @@ for rxn_list in HiPRGen_ionization_reactions:
 chemical_reaction_list = (
     collect_lists_from_nested_dict(full_rxn_dict["chemical"])
 )
-
 # we need the kinetiscope names to do this, but just do it for the HiPRGen
 # reactions so we can write the names with these tags later
 
-# this shouldn't be called just on combination reactions
+# TODO this shouldn't be called just on combination reactions
 
 reclassify_crosslinking_reactions(
     chemical_reaction_list, reaction_writing_data
@@ -753,9 +759,7 @@ for index, reaction in enumerate(kinetiscope_reaction_list):
 
         kinetiscope_reaction_list[index] = shorten_PCET(reaction)
 
-# make sure each reaction in the list is unique
-
-# TODO investigate why we have duplicate reactions if any
+# makes sure each reaction in the list is unique
 
 try:
 
@@ -800,7 +804,7 @@ for reaction in ordered_reactions:
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
 
-parent_filename = "full_with_recomb_121824"
+parent_filename = "euvl_full_recomb_added_121924"
 json_filename = parent_filename + ".json"
 
 write_reactions_to_json(ordered_reactions, json_filename)
