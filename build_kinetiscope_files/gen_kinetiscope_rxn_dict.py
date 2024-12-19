@@ -483,7 +483,6 @@ def build_csv_dict(reaction):
             csv_dict['fwd_prog_k'] = 1
             csv_dict['fwd_k'] = reaction.rate_coefficient
 
-# TODO change defualt values here to zero
     csv_dict = {
         '# equation': reaction.kinetiscope_name,
         'fwd_A': 1,
@@ -640,13 +639,25 @@ def write_reactions_to_csv(dict_list, new_filename):
 
 kinetiscope_reaction_list = []
 os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
-# test_rxns = "HiPRGen_rxns_to_name.json"
-# HiPRGen_reaction_list = loadfn(test_rxns)
 full_rxns = "HiPRGen_rxns_to_name_full_092124.json"
-HiPRGen_reaction_list = loadfn(full_rxns)
+full_rxn_dict = loadfn(full_rxns)
+recomb_reactions = loadfn("Recombination_rxns_121824.json")
+
+# I have tested and none of the recomb reactions are already present in the
+# rxns_without_recomb
+
+full_rxn_dict.update(recomb_reactions)
+# HiPRGen_reaction_list = loadfn(full_rxns)
 # name_mpculeid_file = "name_test_mpculeid_080624.json"
-name_mpculeid_file = "name_full_mpculeid_092124.json"
+pickle_directory = \
+    "C:/Users/jacob/Kinetiscope_Utils/name_molecules"
+
+os.chdir(pickle_directory)
+
+name_mpculeid_file = "name_mpculeid_withrecombs_121824.json"
 name_mpculeid_dict = loadfn(name_mpculeid_file)
+
+os.chdir("G:/My Drive/Kinetiscope/production_simulations_092124")
 # for name in name_mpculeid_dict.keys():
 #     print(name)
 
@@ -681,9 +692,9 @@ reaction_writing_data = ReactionDataStorage(
     absorption_rate_constants
 )
 
-HiPRGen_ionization_reactions = HiPRGen_reaction_list["ionization"].values()
+HiPRGen_ionization_reactions = full_rxn_dict["ionization"].values()
 
-# generate kinetiscope reactions for ionization reacctions
+# # generate kinetiscope reactions for ionization reacctions
 
 for rxn_list in HiPRGen_ionization_reactions:
 
@@ -696,12 +707,12 @@ for rxn_list in HiPRGen_ionization_reactions:
 
         kinetiscope_reaction_list.extend(ionization_reaction_list)
 
-chemical_reaction_list = (
-    collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
-)
+# chemical_reaction_list = (
+#     collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
+# )
 
 chemical_reaction_list = (
-    collect_lists_from_nested_dict(HiPRGen_reaction_list["chemical"])
+    collect_lists_from_nested_dict(full_rxn_dict["chemical"])
 )
 
 # we need the kinetiscope names to do this, but just do it for the HiPRGen
@@ -778,7 +789,7 @@ subcategory_order = [
 # excel file
 
 ordered_reactions = order_kinetiscope_reactions(
-    barrierless_reactions,
+    kinetiscope_reaction_list,
     supercategory_order,
     supercategories_with_subcategories,
     subcategory_order
@@ -789,7 +800,7 @@ for reaction in ordered_reactions:
     check_species_lengths(reaction.kinetiscope_name)
     check_reaction_count(reaction.kinetiscope_name)
 
-parent_filename = "barrierless_only_101424"
+parent_filename = "full_with_recomb_121824"
 json_filename = parent_filename + ".json"
 
 write_reactions_to_json(ordered_reactions, json_filename)

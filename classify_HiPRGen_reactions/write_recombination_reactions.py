@@ -5,14 +5,14 @@ Created on Tue Nov 19 12:55:07 2024
 @author: jacob
 """
 import pickle
-from monty.serialization import loadfn
+from monty.serialization import loadfn, dumpfn
 import os
 import sys
 import networkx as nx
 import pymongo
 import copy
 from collections import Counter
-from pymatgen.core.structure import Molecule
+# from pymatgen.core.structure import Molecule
 sys.path.append('../analyze_kinetiscope_data')
 from build_top_reaction_dict import generate_rxn_data_dict
 sys.path.append('../common')
@@ -315,8 +315,18 @@ def WriteNewMpculeid(graph, formula, charge_int, spin):
     return mpculeid
 
 
+def get_reactant_mpculeids(reactant_list, new_to_old):
+    old_reactant_mpculeids = [new_to_old[mpculeid] for mpculeid in reactant_list]
+    return sorted(old_reactant_mpculeids)
+
 def write_recombination_reaction(reactant_list, recombinant):
-    return " + ".join(reactant_list) + " => " + recombinant
+    reaction_dict = (
+        {"reactants": reactant_list, "products": [recombinant, None]}
+    )
+    
+    reaction_string = " + ".join(reactant_list) + " => " + recombinant
+    
+    return reaction_dict, reaction_string
 
 print("Connecting to MongoDB...")
 
@@ -428,7 +438,8 @@ all_radicals, radicals_to_recombine = build_radicals_sets(
 recombinant_graphs = []
 new_mol_entries = []
 recombinant_mpculeids = set()
-recombination_reactions = set()
+recombination_reaction_names = set()
+recombination_reaction_dicts = []
 
 for problem_radical in radicals_to_recombine:
     for radical in all_radicals:
@@ -457,21 +468,54 @@ for problem_radical in radicals_to_recombine:
 
                 mpculeid = WriteNewMpculeid(recombinant_graph, formula, 0, 1)
 
-                if mpculeid not in new_mpculeid_set:
+                # the | symbol means set union
+
+                mpculeid_is_new = (
+                    mpculeid not in new_mpculeid_set | recombinant_mpculeids
+                )
+
+                # by some chance, we do already have some of these recombs,
+                # and thus already have the recomb reactions. This if statement
+                # makes sure we don't write those recomb reactions again
+
+                if mpculeid_is_new:
 
                     recombinant_mpculeids.add(mpculeid)
+
+                    new_entry = RecombMolEntry(
+                        recombinant_graph,
+                        0,
+                        mpculeid
+                    )
+
+                    new_mol_entries.append(new_entry)
                     recombinant_graphs.append(recombinant_graph)
-                    reactant_list = sorted([radical, problem_radical])
-                    reaction = write_recombination_reaction(
+                    new_reactant_mpculeids = [radical, problem_radical]
+                    reactant_list = get_reactant_mpculeids(new_reactant_mpculeids, new_to_old)
+                    # reactant_list = sorted([radical, problem_radical])
+                    reaction_dict, reaction_string = write_recombination_reaction(
                         reactant_list, mpculeid
                     )
-                    mol = Molecule()
-                    recombination_reactions.add(reaction)
+                    
+                    if reaction_string not in recombination_reaction_names:
+                        recombination_reaction_names.add(reaction_string)
+                        recombination_reaction_dicts.append(reaction_dict)
+                    
+
+                # mol = Molecule(
+                #     species=formula,
+                #     coords=[],
+                #     charge=0,
+                #     spin_multiplicity=1
+                # )
+                
+                    # recombination_reactions.add(reaction_string)
+dumpfn(recombination_reaction_dicts, "recombination_reactions_121724.json")                  
+# dumpfn(new_mol_entries, "recomb_mol_entries_121624.json")
                     # sys.exit()
-print(f"Estimated number of recombinants: {len(radicals_to_recombine) * len(all_radicals)}")
-# estimated number: 3721, w/o removing duplicates
-print(f"Total number of new recombinants: {len(recombinant_mpculeids)}")
-print(f"Total number of new reactions: {len(recombination_reactions)}")
+# print(f"Estimated number of recombinants: {len(radicals_to_recombine) * len(all_radicals)}")
+# print(f"Total number of new recombinants: {len(new_mol_entries)}")
+# print(f"Total number of new reactions: {len(recombination_reactions)}")
         # combined_list = list(combined_graph.nodes(data=True))
         # for index, entry in enumerate(problem_list):
         #     corresponding_entry = combined_list[index]

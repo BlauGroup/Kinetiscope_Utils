@@ -52,20 +52,37 @@ class HiPRGen_Reaction(MSONable):
 
 
 class RecombMolEntry(MSONable):
-    def __init__(self, graph, molecule, entry_id):
+    def __init__(self, graph, charge, entry_id):
+        """
+        Initialize a RecombMolEntry object.
+
+        Parameters:
+        ----------
+        graph : networkx.Graph
+            The molecular graph representation of the species.
+        charge : int
+            The charge of the species.
+        entry_id : str
+            A unique identifier for the species.
+        """
         self.graph = graph
-        self.molecule = molecule
+        self.charge = charge
         self.entry_id = entry_id
 
     def as_dict(self):
         """
         Serialize the object to a dictionary for MSONable compatibility.
+
+        Returns:
+        -------
+        dict
+            Serialized representation of the object.
         """
         return {
             "@module": self.__class__.__module__,
             "@class": self.__class__.__name__,
             "graph": nx.node_link_data(self.graph),  # Converts the NetworkX graph to serializable data
-            "molecule": self.molecule.as_dict(),  # Assumes pymatgen Molecule object has as_dict
+            "charge": self.charge,
             "entry_id": self.entry_id
         }
 
@@ -73,20 +90,35 @@ class RecombMolEntry(MSONable):
     def from_dict(cls, d):
         """
         Deserialize an object from a dictionary.
+
+        Parameters:
+        ----------
+        d : dict
+            The serialized dictionary representation of a RecombMolEntry.
+
+        Returns:
+        -------
+        RecombMolEntry
+            The reconstructed RecombMolEntry object.
         """
         graph = nx.node_link_graph(d["graph"])  # Reconstruct the NetworkX graph
-        molecule = Molecule.from_dict(d["molecule"])  # Assumes pymatgen Molecule has from_dict
+        charge = d["charge"]
         entry_id = d["entry_id"]
-        return cls(graph, molecule, entry_id)
+        return cls(graph, charge, entry_id)
 
     def __str__(self):
         """
         Provides a readable string representation of the object.
+
+        Returns:
+        -------
+        str
+            A human-readable string representation of the RecombMolEntry.
         """
         return (
             f"RecombMolEntry(\n"
             f"  entry_id: {self.entry_id},\n"
-            f"  molecule: {self.molecule.composition},\n"
+            f"  charge: {self.charge},\n"
             f"  graph nodes: {len(self.graph.nodes)},\n"
             f"  graph edges: {len(self.graph.edges)}\n"
             f")"

@@ -11,10 +11,12 @@ from pymatgen.core.structure import Molecule
 from pymatgen.analysis.graphs import MoleculeGraph
 from pymatgen.analysis.local_env import OpenBabelNN
 import glob
-from monty.serialization import dumpfn
+from monty.serialization import loadfn, dumpfn
 import os
 import pickle
 import sys
+sys.path.append('../common')
+from utilities import correct_path_change_dir
 
 #TODO incorporate spin into names
 
@@ -27,6 +29,23 @@ json of the form name:mpculeid.
 
 """
 
+
+class NameLengthError(Exception):
+    """
+    Custom exception for names exceeding the length limit in Kinetiscope.
+    """
+    def __init__(self, name, length, message=None):
+        self.name = name
+        self.length = length
+        if message is None:
+            message = (
+                f"Generated species name is too long! {name}\n"
+                f"Length of name is: {length}\n"
+                "Consider changing the names of functional groups to be shorter."
+            )
+        super().__init__(message)
+        
+        
 def functional_group_present(mol_graph, func): 
     """
     Tests whether or not a given functional group is present in a molecule via
@@ -232,7 +251,7 @@ def add_charge(species_name, charge):
     
     return species_name
 
-def generate_species_name(species_graph, species_pymatgen_mol, func_group_dict):
+def generate_species_name(species_graph, charge, func_group_dict):
     """
     Generates a name for a species based on the functional groups it contains.
     
@@ -271,8 +290,8 @@ def generate_species_name(species_graph, species_pymatgen_mol, func_group_dict):
     
         species_name = add_composition(species_name, remaining_species_graph)
         
-    species_charge = species_pymatgen_mol.charge
-    species_name = add_charge(species_name, species_charge)
+    # species_charge = species_pymatgen_mol.charge
+    species_name = add_charge(species_name, charge)
     
     return species_name
 
@@ -355,6 +374,22 @@ def update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid):
         name_mpcule_dict.pop(test_name)
         
     name_mpcule_dict[new_stereos[-1]] = mpculeid
+    
+def NameSpecies(graph, charge, func_group_dict, mpculeid,  stereo_dict, name_mpcule_dict):
+
+    test_name = generate_species_name(graph, charge, func_group_dict)
+
+    if test_name in stereo_dict:
+        
+        update_names(test_name, stereo_dict, name_mpcule_dict, mpculeid)
+        
+    else:
+        
+        name_mpcule_dict[test_name] = mpculeid
+        stereo_dict[test_name] = [test_name]
+        
+    if len(test_name) >= 33:  # Names in Kinetiscope are limited to 32 chars
+        raise NameLengthError(test_name, len(test_name))
 
 def reorder_dict_keys(input_dict, key_order):
     """
@@ -385,10 +420,50 @@ def reorder_dict_keys(input_dict, key_order):
     reordered_dict = {key: input_dict[key] for key in new_order}
     
     return reordered_dict
+
+def build_recomb_func_group_dict(func_group_dict):
+    """
+    Builds a recombination functional group dictionary where the keys in
+    func_group_dict are replaced with shorthand versions from shorthand_dict
+    if available. If no shorthand exists, the original key is retained. The 
+    names for the recombinants are too long for kinetiscope, while those we
+    wrote previously (for other species in our network) are not, so this
+    just generates special, shorter names for recombinants.
+
+    Parameters
+    ----------
+    func_group_dict : dict
+        The original dictionary of functional groups.
+
+    Returns
+    -------
+    dict
+        A new dictionary with updated keys using shorthand where applicable.
+    """
+    shorthand_dict = {
+        "COO": "CX",
+        "ester": "e",
+        "PHSb": "HS",
+        "phol": "po",
+        "phyl": "py",
+        "tbut": "t",
+        "tBMb": "TBM"
+    }
     
-#Change directory to the functional groups folder
-func_groups_dir = r"func_groups"
-os.chdir(func_groups_dir)
+    return {shorthand_dict.get(key, key): value for key, value in func_group_dict.items()}
+
+
+kinetiscope_files_dir = (
+    r"G:\My Drive\Kinetiscope\production_simulations_092124"
+)
+
+correct_path_change_dir(kinetiscope_files_dir)
+
+recomb_mol_entries = loadfn("recomb_mol_entries_121624.json")
+# sys.exit()
+# Change directory to the functional groups folder
+func_groups_dir = r"C:\Users\jacob\Kinetiscope_Utils\name_molecules\func_groups"
+correct_path_change_dir(func_groups_dir)
 
 # Process functional groups' XYZ files
 print('Associating functional groups with their Molecule objects...')
@@ -401,10 +476,29 @@ for filename in glob.glob('*.xyz'):
     
     name = filename.replace('.xyz', '')
     func_group_dict[name] = func_group_undirected_graph
+    
+print("Done!")
+print("Naming recombinants...")
 
-order_list = ["PtBMAb", "PHSb", "TPS", "phol", "ester", "COOH", "COO"]
+order_list = ["tBMb", "PHSb", "TPS", "phol", "ester", "COOH", "COO"]
 func_group_dict = reorder_dict_keys(func_group_dict, order_list)
+recomb_func_group_dict = build_recomb_func_group_dict(func_group_dict)
+name_mpcule_dict = {}
+stereo_dict = {} #assocites a given base name with all of its stereoisomers
+ 
+for recomb_mol_entry in recomb_mol_entries:
+    graph = nx.Graph(recomb_mol_entry.graph)
+    charge = recomb_mol_entry.charge
+    mpculeid = recomb_mol_entry.entry_id
+    NameSpecies(graph, charge, recomb_func_group_dict, mpculeid,  stereo_dict, name_mpcule_dict)
+    
+for name in name_mpcule_dict.keys():
+    if len(name) > 32:
+        raise NameLengthError(name, len(name))
 
+print("Done!")
+# sys.exit()
+   
 pickle_directory = \
     "C:/Users/jacob/Kinetiscope_Utils/name_molecules"
     
@@ -431,44 +525,48 @@ with open('mol_entries.pickle', 'rb') as f: #loads HiPRGen mol_entry objs
     
 print('Done!')
 
-number_to_name = len(mol_entries)
+# number_to_name = len(mol_entries)
 
-print("Generating names...")
-name_mpcule_dict = {}
-stereo_dict = {} #assocites a given base name with all of its stereoisomers
+print("Generating other species names...")
 
 # Process each molecule and generate a species name
 for mol_entry in mol_entries:
     
     graph = mol_entry.graph
     molecule = mol_entry.molecule
+    charge = molecule.charge
+    mpculeid = mol_entry.entry_id
     
-    species_name = generate_species_name(graph, molecule, func_group_dict)
+    NameSpecies(graph, charge, func_group_dict, mpculeid,  stereo_dict, name_mpcule_dict)
     
-    mpcule_id = mol_entry.entry_id
+    # species_name = generate_species_name(graph, charge, func_group_dict)
     
-    if species_name in stereo_dict:
+    # # mpcule_id = mol_entry.entry_id
+    
+    # if species_name in stereo_dict:
         
-        update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
+    #     update_names(species_name, stereo_dict, name_mpcule_dict, mpcule_id)
         
-    else:
+    # else:
         
-        name_mpcule_dict[species_name] = mpcule_id
-        stereo_dict[species_name] = [species_name]
+    #     name_mpcule_dict[species_name] = mpcule_id
+    #     stereo_dict[species_name] = [species_name]
         
-    if len(species_name) >= 33: #names in kinetiscope are limited to 32 chars
+    # if len(species_name) >= 33: #names in kinetiscope are limited to 32 chars
         
-        print(f"Generated species name is too long! {species_name}")
-        print(f"Length of name is: {len(species_name)}")
-        print("consider changing the names of functional groups to be shorter")
-        print("Aborting")
-        sys.exit()
-        
+    #     print(f"Generated species name is too long! {species_name}")
+    #     print(f"Length of name is: {len(species_name)}")
+    #     print("consider changing the names of functional groups to be shorter")
+    #     print("Aborting")
+    #     sys.exit()
+for name in name_mpcule_dict.keys():
+    if len(name) > 32:
+        raise NameLengthError(name, len(name))
 
 print("Done!")
 
 number_named = len(name_mpcule_dict)
-total_num_names = len(name_mpcule_dict)
+number_to_name = len(mol_entries) + len(recomb_mol_entries)
 
 if number_named != number_to_name:
     
@@ -480,6 +578,6 @@ if number_named != number_to_name:
 
 print("saving names to files...")
 
-dumpfn(name_mpcule_dict, "name_full_mpculeid_092124.json")
+dumpfn(name_mpcule_dict, "name_mpculeid_withrecombs_121824.json")
 
 print("Done!")

@@ -145,80 +145,86 @@ def add_reaction_to_dictionary(reaction, reaction_dict):
     return reaction_dict
 
 
-# add all P1 reactions
-# P1_directory = "G:/My Drive/CRNs/071924_test_p1"
-P1_directory = "G:/My Drive/CRNs/euvl_092024_phase1"
-os.chdir(P1_directory)
-P1_pathways_and_reactions = loadfn("reaction_tally.json")
-P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
-print(P1_rxn_dicts)
-sys.exit()
+# # add all P1 reactions
+# # P1_directory = "G:/My Drive/CRNs/071924_test_p1"
+# P1_directory = "G:/My Drive/CRNs/euvl_092024_phase1"
+# os.chdir(P1_directory)
+# P1_pathways_and_reactions = loadfn("reaction_tally.json")
+# P1_rxn_dicts = P1_pathways_and_reactions["reactions"].values()
 rxns_already_added = set()
 rxns_for_simulation = []
 
-for rxn_dict in P1_rxn_dicts:
+# for rxn_dict in P1_rxn_dicts:
 
-    new_rxn = HiPRGen_Reaction(rxn_dict, phase=1)
+#     new_rxn = HiPRGen_Reaction(rxn_dict, phase=1)
 
-    if reaction_is_ionization(new_rxn):
+#     if reaction_is_ionization(new_rxn):
 
-        tag = determine_broad_ionization_tag(new_rxn)
+#         tag = determine_broad_ionization_tag(new_rxn)
 
-    else:
+#     else:
 
-        tag = determine_chemical_reaction_tag(new_rxn)
+#         tag = determine_chemical_reaction_tag(new_rxn)
 
-    rxns_for_simulation, rxns_already_added = add_reaction_if_new(
-            new_rxn, tag, rxns_for_simulation, rxns_already_added
-        )
+#     rxns_for_simulation, rxns_already_added = add_reaction_if_new(
+#             new_rxn, tag, rxns_for_simulation, rxns_already_added
+#         )
 
-for reaction in rxns_for_simulation:  # can narrow down now
+# for reaction in rxns_for_simulation:  # can narrow down now
 
-    if reaction.tag == "attachment_or_recombination":
+#     if reaction.tag == "attachment_or_recombination":
 
-        reaction.tag = narrow_down_ionization_type(
-            reaction, rxns_for_simulation
-        )
+#         reaction.tag = narrow_down_ionization_type(
+#             reaction, rxns_for_simulation
+#         )
 
 
-# add all P2 reactions that fired >= 500 times
+# # add all P2 reactions that fired >= 500 times
 
-# P2_directory = "G:/My Drive/CRNs/071924_test_p2"
-P2_directory = "G:/My Drive/CRNs/euvl_092024_phase2"
+# # P2_directory = "G:/My Drive/CRNs/071924_test_p2"
+# P2_directory = "G:/My Drive/CRNs/euvl_092024_phase2"
 
-frequency_threshold = 100
+# frequency_threshold = 100
 
-add_high_frequency_P2_reactions(
-    P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold
-    )
+# add_high_frequency_P2_reactions(
+#     P2_directory, rxns_for_simulation, rxns_already_added, frequency_threshold
+#     )
 
-network_products = loadfn("sink_report.json")
+# network_products = loadfn("sink_report.json")
 
-for product_dict in network_products.values():
+# for product_dict in network_products.values():
 
-    species_index = product_dict["species_index"]
+#     species_index = product_dict["species_index"]
 
-    reactions_and_pathways = loadfn(str(species_index) + "_pathway.json")
-    all_pathways_list = list(reactions_and_pathways["pathways"])
-    all_reactions = reactions_and_pathways["reactions"]
-    sorted_pathways_list = sort_pathways_list(all_pathways_list)
-    to_save_pathways = []
+#     reactions_and_pathways = loadfn(str(species_index) + "_pathway.json")
+#     all_pathways_list = list(reactions_and_pathways["pathways"])
+#     all_reactions = reactions_and_pathways["reactions"]
+#     sorted_pathways_list = sort_pathways_list(all_pathways_list)
+#     to_save_pathways = []
 
-    for pathway_dict in sorted_pathways_list:
+#     for pathway_dict in sorted_pathways_list:
 
-        pathway = pathway_dict["pathway"]
-        to_save_pathways.append(pathway)
-        number_pathways_saved = len(to_save_pathways)
+#         pathway = pathway_dict["pathway"]
+#         to_save_pathways.append(pathway)
+#         number_pathways_saved = len(to_save_pathways)
 
-        if number_pathways_saved >= 10:
-            break
+#         if number_pathways_saved >= 10:
+#             break
 
-    for pathway in to_save_pathways:
-        for reaction in pathway:
-            rxn_dict = all_reactions.get(str(reaction), None)
-            rxns_for_simulation, rxns_already_added = process_P2_reaction(
-                            rxn_dict, rxns_for_simulation, rxns_already_added
-                        )
+#     for pathway in to_save_pathways:
+#         for reaction in pathway:
+#             rxn_dict = all_reactions.get(str(reaction), None)
+#             rxns_for_simulation, rxns_already_added = process_P2_reaction(
+#                             rxn_dict, rxns_for_simulation, rxns_already_added
+#                         )
+
+# add recombination recations
+
+recombination_directory = "G:/My Drive/Kinetiscope/production_simulations_092124/"
+os.chdir(recombination_directory)
+recombination_reactions = loadfn("recombination_reactions_121724.json")
+for recomb_reaction in recombination_reactions:
+    rxns_for_simulation, rxns_already_added = process_P2_reaction(recomb_reaction, rxns_for_simulation, rxns_already_added)
 
 tagged_rxn_dict = {
     "ionization": {},
@@ -242,5 +248,5 @@ for reaction in rxns_for_simulation:
     reaction.classification_list = write_reaction_classification(reaction)
     add_reaction_to_dictionary(reaction, tagged_rxn_dict)
 
-json_name = "HiPRGen_rxns_to_name_full_111424.json"
+json_name = "Recombination_rxns_121824.json"
 dumpfn(tagged_rxn_dict, json_name)
